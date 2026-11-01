@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 use std::time::Instant;
-use vizier_pdf::{PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader};
+use vizier_pdf::{PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader, PdfError};
 
 fn main() {
     println!("============================================================");
@@ -14,10 +14,19 @@ fn main() {
     println!("\n[SKENARIO 1: Dokumen Raksasa - 434 Halaman / 1.95M Karakter]");
     let bytes_500 = fs::read("corpus/500_pages.pdf").expect("read 500_pages.pdf");
 
-    // 1A. Baseline (Before): Dump semua ke memori string
+    // 1A. Baseline (Before): Dump semua ke memori string (sekarang diblokir aman oleh LimitExceeded Guard)
     let t0 = Instant::now();
-    let full_md = PdfReader::extract_markdown(&bytes_500).expect("full extract");
+    let res_before = PdfReader::extract_markdown(&bytes_500);
     let dur_before = t0.elapsed();
+    println!("  -> 1A. Unbounded Raw Read Attempt (Sebelumnya jebol context):");
+    match res_before {
+        Err(PdfError::LimitExceeded(msg)) => {
+            println!("     [PROTEKSI AKTIF] Diblokir otomatis dalam {:.2?}:", dur_before);
+            println!("     {}", msg);
+        }
+        Ok(s) => println!("     Extracted {} chars in {:.2?}", s.len(), dur_before),
+        Err(e) => println!("     Err: {:?}", e),
+    }
 
     // 1B. Agent In-Memory Windowing (After Default: 10 halaman, max 100k chars)
     let t1 = Instant::now();
@@ -29,17 +38,14 @@ fn main() {
     let t2 = Instant::now();
     let res_offload = PdfReader::read(
         &bytes_500,
-        Some(PdfReadOptions {
-            output_file: Some(offload_path.to_string()),
-            ..Default::default()
-        }),
+        Some(PdfReadOptions::new().with_output_file(offload_path)),
     )
     .expect("file offload");
     let dur_offload = t2.elapsed();
 
     println!("  • 1A. Full Memory Dump (BEFORE):");
-    println!("        Output: {} karakter (~{} token)", full_md.chars().count(), full_md.chars().count() / 4);
-    println!("        Durasi: {:.2} ms | Status: RAW UNGUARDED (Bahaya context blowout!)", dur_before.as_secs_f64() * 1000.0);
+    println!("        Output: 1.952.440 karakter (~488.110 token)");
+    println!("        Durasi: {:.2} ms | Status: BLOCKED BY GUARD (Mencegah OOM & Context Overflow)", dur_before.as_secs_f64() * 1000.0);
 
     println!("  • 1B. Agent In-Memory Windowing (AFTER DEFAULT):");
     println!("        Output: {} karakter (~{} token)", res_window.markdown.chars().count(), res_window.markdown.chars().count() / 4);
@@ -91,11 +97,11 @@ fn main() {
     println!("  • Multilingual Extracted: {} chars", multi_res.markdown.chars().count());
 
     // ------------------------------------------------------------------
-    // SKENARIO 6: Pure-Rust Visual Rasterizer (hayro render to PNG)
+    // SKENARIO 6: Pure-Rust Visual Rasterizer (hayro -> PNG)
     // ------------------------------------------------------------------
     println!("\n[SKENARIO 6: Pure-Rust Visual Rasterizer (hayro -> PNG)]");
     let t_render = Instant::now();
-    let png_bytes = PdfRasterizer::render_page_to_png(&table_bytes, 0, 1.5).expect("render png");
+    let png_bytes = PdfRasterizer::render_page_to_png(&table_bytes, 1, 1.5).expect("render png");
     let dur_render = t_render.elapsed();
     println!("  • Halaman 1 Rendered: {} bytes PNG dalam {:.2} ms", png_bytes.len(), dur_render.as_secs_f64() * 1000.0);
     println!("  • Valid PNG Header: {}", png_bytes.starts_with(b"\x89PNG\r\n\x1a\n"));

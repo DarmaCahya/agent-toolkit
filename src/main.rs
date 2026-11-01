@@ -54,7 +54,7 @@ fn main() {
             });
 
             let start = Instant::now();
-            let image = PdfRasterizer::render_page(&bytes, 0, scale).unwrap_or_else(|e| {
+            let image = PdfRasterizer::render_page(&bytes, 1, scale).unwrap_or_else(|e| {
                 eprintln!("Render error: {}", e);
                 process::exit(1);
             });
@@ -64,10 +64,10 @@ fn main() {
             });
             let elapsed = start.elapsed();
             println!(
-                "Rendered page 0 at {}x scale ({}x{} px) to {} in {:.4}s",
+                "Rendered page 1 at {}x scale ({}x{} px) to {} in {:.4}s",
                 scale,
-                image.width,
-                image.height,
+                image.width(),
+                image.height(),
                 output_path,
                 elapsed.as_secs_f64()
             );
@@ -125,14 +125,14 @@ fn main() {
 
             // 3. Rasterize PDF -> PNG
             let t2 = Instant::now();
-            let img = PdfRasterizer::render_page(&pdf_bytes, 0, 2.0).expect("Rasterize Page");
+            let img = PdfRasterizer::render_page(&pdf_bytes, 1, 2.0).expect("Rasterize Page");
             img.save_png(out_png).expect("Save PNG");
             let render_dur = t2.elapsed();
 
             println!("Cycle Test Completed:");
             println!("- Generation:  {:.4}s ({} bytes PDF)", gen_dur.as_secs_f64(), pdf_bytes.len());
             println!("- Read / MD:   {:.4}s ({} chars extracted)", read_dur.as_secs_f64(), md.len());
-            println!("- Rasterize:   {:.4}s ({}x{} PNG)", render_dur.as_secs_f64(), img.width, img.height);
+            println!("- Rasterize:   {:.4}s ({}x{} PNG)", render_dur.as_secs_f64(), img.width(), img.height());
         }
         "benchmark" => {
             let corpus_dir = args.get(2).map(|s| s.as_str()).unwrap_or("/srv/hermes/workspace/pdf-benchmarks/corpus");

@@ -47,12 +47,7 @@ fn test_structured_reading_with_agent_guards() {
     assert_eq!(total, 434);
 
     // Test 1: Windowed read (only first 3 pages)
-    let opts = PdfReadOptions {
-        page_start: Some(1),
-        page_limit: Some(3),
-        max_chars: Some(100_000),
-        ..Default::default()
-    };
+    let opts = PdfReadOptions::new().with_pages(1, 3).with_max_chars(100_000);
     let res = PdfReader::read(&bytes, Some(opts)).expect("Windowed read");
     assert_eq!(res.page_start, 1);
     assert_eq!(res.page_end, 3);
@@ -62,12 +57,7 @@ fn test_structured_reading_with_agent_guards() {
     assert!(!res.scanned_likely, "500_pages has real text");
 
     // Test 2: Character budget cap (e.g. 200 chars)
-    let budget_opts = PdfReadOptions {
-        page_start: Some(1),
-        page_limit: Some(5),
-        max_chars: Some(200),
-        ..Default::default()
-    };
+    let budget_opts = PdfReadOptions::new().with_pages(1, 5).with_max_chars(200);
     let budget_res = PdfReader::read(&bytes, Some(budget_opts)).expect("Budget read");
     assert!(budget_res.markdown.chars().count() <= 200);
     assert!(budget_res.truncated);
@@ -91,12 +81,7 @@ fn test_full_document_file_offload() {
     let out_file = "tests/table_extracted.md";
     let _ = fs::remove_file(out_file);
 
-    let opts = PdfReadOptions {
-        page_start: None,
-        page_limit: None,
-        max_chars: None,
-        output_file: Some(out_file.to_string()),
-    };
+    let opts = PdfReadOptions::new().with_output_file(out_file);
 
     let res = PdfReader::read(&bytes, Some(opts)).expect("Read with file offload");
     assert!(!res.truncated);
@@ -113,10 +98,10 @@ fn test_full_document_file_offload() {
 #[test]
 fn test_pdf_rasterization_contract() {
     let bytes = get_corpus_file("table.pdf");
-    let image = PdfRasterizer::render_page(&bytes, 0, 1.0).expect("Render page 0");
-    assert!(image.width > 0);
-    assert!(image.height > 0);
-    assert!(!image.raw_rgba.is_empty());
+    let image = PdfRasterizer::render_page(&bytes, 1, 1.0).expect("Render page 1");
+    assert!(image.width() > 0);
+    assert!(image.height() > 0);
+    assert!(!image.as_rgba().is_empty());
 
     let png_bytes = image.to_png_bytes().expect("Encode PNG");
     assert!(png_bytes.starts_with(b"\x89PNG\r\n\x1a\n"), "Must be valid PNG header");
@@ -152,6 +137,6 @@ fn test_full_roundtrip_contract() {
     assert!(md.contains("Quarterly Summary") || md.contains("Alpha"));
 
     // 3. Rasterize
-    let png = PdfRasterizer::render_page_to_png(&pdf_bytes, 0, 1.5).expect("Rasterize PNG");
+    let png = PdfRasterizer::render_page_to_png(&pdf_bytes, 1, 1.5).expect("Rasterize PNG");
     assert!(png.starts_with(b"\x89PNG"));
 }

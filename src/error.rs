@@ -1,6 +1,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum PdfError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
@@ -14,8 +15,17 @@ pub enum PdfError {
     #[error("Failed to generate PDF: {0}")]
     Generate(String),
 
-    #[error("Invalid page index: requested {page}, total pages {total}")]
+    #[error("Invalid page number: requested page {page}, document has {total} pages (pages are 1-indexed)")]
     InvalidPage { page: usize, total: usize },
+
+    #[error("PDF document is encrypted/password-protected: {0}")]
+    Encrypted(String),
+
+    #[error("Invalid argument: {0}")]
+    InvalidArgument(String),
+
+    #[error("Safety limit exceeded: {0}")]
+    LimitExceeded(String),
 }
 
 pub type Result<T> = std::result::Result<T, PdfError>;
