@@ -10,7 +10,8 @@ use std::path::Path;
 pub struct PdfReader;
 
 impl PdfReader {
-    /// Agent-focused structured reading with pagination, character budget guard, and scanned document detection.
+    /// Agent-focused structured reading with pagination, character budget guard, scanned document detection,
+    /// and full-file offload option (`output_file`).
     pub fn read(pdf_bytes: &[u8], options: Option<PdfReadOptions>) -> Result<PdfReadResult> {
         let opts = options.unwrap_or_default();
         let doc = PdfDocument::from_bytes(pdf_bytes.to_vec())
@@ -27,16 +28,53 @@ impl PdfReader {
                 page_start: 0,
                 page_end: 0,
                 truncated: false,
+                total_chars: Some(0),
+                saved_to: None,
                 note: Some("Empty PDF document (0 pages)".to_string()),
                 scanned_likely: false,
             });
         }
 
+        let conv_opts = ConversionOptions::default();
+
+        // 1. File Offload Scenario: User wants 100% full extraction written directly to disk
+        if let Some(ref out_path) = opts.output_file {
+            let full_md = doc
+                .to_markdown_all(&conv_opts)
+                .map_err(|e| PdfError::Read(format!("Failed to extract full document: {}", e)))?;
+            let total_chars = full_md.chars().count();
+            fs::write(out_path, &full_md)?;
+
+            let scanned_likely = total > 0 && (total_chars / total < 25);
+            let note = if scanned_likely {
+                format!(
+                    "Extracted {total} pages ({total_chars} chars) and saved to {out_path}. Scanned/image-only document suspected. Use `pdf_render` for visual inspection."
+                )
+            } else {
+                format!(
+                    "Extracted full document ({total} pages, {total_chars} chars) and saved to {out_path}. Use search or read_file with offset to inspect."
+                )
+            };
+
+            let preview: String = full_md.chars().take(400).collect();
+
+            return Ok(PdfReadResult {
+                markdown: preview,
+                total_pages: total,
+                page_start: 1,
+                page_end: total,
+                truncated: false,
+                total_chars: Some(total_chars),
+                saved_to: Some(out_path.clone()),
+                note: Some(note),
+                scanned_likely,
+            });
+        }
+
+        // 2. In-Memory Windowed Context Scenario: Protect LLM context window with paging & char limits
         let p_start = opts.page_start.unwrap_or(1).max(1);
         let p_limit = opts.page_limit.unwrap_or(10).max(1);
         let max_chars = opts.max_chars.unwrap_or(100_000);
-
-        let conv_opts = ConversionOptions::default();
 
         let mut collected_md = String::new();
         let mut truncated = false;
@@ -98,6 +136,8 @@ impl PdfReader {
             page_start: start_idx + 1,
             page_end: end_idx,
             truncated,
+            total_chars: None,
+            saved_to: None,
             note,
             scanned_likely,
         })

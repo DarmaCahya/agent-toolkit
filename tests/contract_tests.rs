@@ -51,6 +51,7 @@ fn test_structured_reading_with_agent_guards() {
         page_start: Some(1),
         page_limit: Some(3),
         max_chars: Some(100_000),
+        ..Default::default()
     };
     let res = PdfReader::read(&bytes, Some(opts)).expect("Windowed read");
     assert_eq!(res.page_start, 1);
@@ -65,6 +66,7 @@ fn test_structured_reading_with_agent_guards() {
         page_start: Some(1),
         page_limit: Some(5),
         max_chars: Some(200),
+        ..Default::default()
     };
     let budget_res = PdfReader::read(&bytes, Some(budget_opts)).expect("Budget read");
     assert!(budget_res.markdown.chars().count() <= 200);
@@ -81,6 +83,31 @@ fn test_scanned_pdf_detection_heuristics() {
     let res = PdfReader::read(&empty_pdf, None).expect("Read empty PDF");
     assert!(res.scanned_likely, "Should detect empty text layer as scanned/image-only");
     assert!(res.note.as_ref().unwrap().contains("pdf_render"));
+}
+
+#[test]
+fn test_full_document_file_offload() {
+    let bytes = get_corpus_file("table.pdf");
+    let out_file = "tests/table_extracted.md";
+    let _ = fs::remove_file(out_file);
+
+    let opts = PdfReadOptions {
+        page_start: None,
+        page_limit: None,
+        max_chars: None,
+        output_file: Some(out_file.to_string()),
+    };
+
+    let res = PdfReader::read(&bytes, Some(opts)).expect("Read with file offload");
+    assert!(!res.truncated);
+    assert_eq!(res.saved_to.as_deref(), Some(out_file));
+    assert!(res.total_chars.unwrap_or(0) > 0);
+    assert!(Path::new(out_file).exists());
+
+    let content = fs::read_to_string(out_file).expect("Read back offloaded file");
+    assert!(content.contains('|'), "Extracted file must contain table pipes");
+
+    let _ = fs::remove_file(out_file);
 }
 
 #[test]

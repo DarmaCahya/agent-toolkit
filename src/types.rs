@@ -14,8 +14,11 @@ pub struct PdfReadOptions {
     pub page_start: Option<usize>,
     /// Number of pages to read from page_start. Default: 10
     pub page_limit: Option<usize>,
-    /// Maximum character budget for output markdown. Default: 100_000
+    /// Maximum character budget for output markdown in context. Default: 100_000
     pub max_chars: Option<usize>,
+    /// If specified, writes 100% full markdown extraction to this file path,
+    /// offloading large documents completely from the LLM context window.
+    pub output_file: Option<String>,
 }
 
 impl Default for PdfReadOptions {
@@ -24,6 +27,7 @@ impl Default for PdfReadOptions {
             page_start: Some(1),
             page_limit: Some(10),
             max_chars: Some(100_000),
+            output_file: None,
         }
     }
 }
@@ -31,7 +35,7 @@ impl Default for PdfReadOptions {
 /// Structured result of PDF reading designed specifically for AI Agent consumption.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PdfReadResult {
-    /// Extracted markdown text.
+    /// Extracted markdown text (or preview if offloaded to file).
     pub markdown: String,
     /// Total number of pages in the PDF.
     pub total_pages: usize,
@@ -41,6 +45,10 @@ pub struct PdfReadResult {
     pub page_end: usize,
     /// True if the output was cut by character budget or page limit.
     pub truncated: bool,
+    /// Total characters of full extraction when offloaded to file.
+    pub total_chars: Option<usize>,
+    /// File path where full extraction was saved, if offload was requested.
+    pub saved_to: Option<String>,
     /// Helpful note/context for the LLM agent.
     pub note: Option<String>,
     /// True if document appears to be scanned images without text layer.
