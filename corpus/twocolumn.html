@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head><style>
+  body { font-family: sans-serif; margin: 30px; }
+  h1 { text-align: center; color: #1a202c; }
+  .abstract { font-style: italic; margin-bottom: 25px; padding: 10px; background: #f7fafc; border-left: 4px solid #4a5568; }
+  .columns { column-count: 2; column-gap: 30px; text-align: justify; line-height: 1.5; }
+</style></head>
+<body>
+  <h1>Autonomous Agent Tooling: An Empirical Review</h1>
+  <div class="abstract">Abstract: This paper presents an investigation into low-overhead document processors for multi-agent daemon systems.</div>
+  <div class="columns">
+    <p>Modern autonomous agent architectures face strict resource bounds. When agents execute in multi-tenant background daemons, launching full browser runtimes for routine document transformations imposes high latency penalties and memory overhead.</p>
+    <p>By contrasting headless browser architectures with lightweight native implementations, we identify optimal operating regimes. Specialized layout algorithms achieve sub-millisecond execution times while bounding resident set sizes.</p>
+    <p>Furthermore, reading pipelines require careful handling of text stream extraction. Naive tokenizers frequently fail on CIDFont subsets, whereas robust AST interpreters reliably recover structural semantics.</p>
+    <p>Experimental evaluations confirm that browserless rendering satisfies print media fidelity while conserving up to 90% of runtime host memory.</p>
+  </div>
+</body></html>
