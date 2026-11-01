@@ -1,6 +1,8 @@
 use crate::error::{PdfError, Result};
+use crate::types::{PdfReadOptions, PdfReadResult};
 use pdf_oxide::converters::ConversionOptions;
 use pdf_oxide::PdfDocument;
+use std::fs;
 use std::path::Path;
 
 /// High-level PDF reader and text/Markdown extractor.
@@ -8,6 +10,105 @@ use std::path::Path;
 pub struct PdfReader;
 
 impl PdfReader {
+    /// Agent-focused structured reading with pagination, character budget guard, and scanned document detection.
+    pub fn read(pdf_bytes: &[u8], options: Option<PdfReadOptions>) -> Result<PdfReadResult> {
+        let opts = options.unwrap_or_default();
+        let doc = PdfDocument::from_bytes(pdf_bytes.to_vec())
+            .map_err(|e| PdfError::Read(format!("Failed to parse PDF bytes: {}", e)))?;
+
+        let total = doc
+            .page_count()
+            .map_err(|e| PdfError::Read(format!("Failed to get page count: {}", e)))?;
+
+        if total == 0 {
+            return Ok(PdfReadResult {
+                markdown: String::new(),
+                total_pages: 0,
+                page_start: 0,
+                page_end: 0,
+                truncated: false,
+                note: Some("Empty PDF document (0 pages)".to_string()),
+                scanned_likely: false,
+            });
+        }
+
+        let p_start = opts.page_start.unwrap_or(1).max(1);
+        let p_limit = opts.page_limit.unwrap_or(10).max(1);
+        let max_chars = opts.max_chars.unwrap_or(100_000);
+
+        let conv_opts = ConversionOptions::default();
+
+        let mut collected_md = String::new();
+        let mut truncated = false;
+        let mut notes = Vec::new();
+
+        let start_idx = (p_start - 1).min(total - 1);
+        let end_idx = (start_idx + p_limit).min(total);
+
+        for p_idx in start_idx..end_idx {
+            match doc.to_markdown(p_idx, &conv_opts) {
+                Ok(page_md) => {
+                    let trimmed = page_md.trim();
+                    if !trimmed.is_empty() {
+                        if !collected_md.is_empty() {
+                            collected_md.push_str("\n\n---\n\n");
+                        }
+                        collected_md.push_str(trimmed);
+                    }
+                    if collected_md.chars().count() >= max_chars {
+                        let kept: String = collected_md.chars().take(max_chars).collect();
+                        collected_md = kept;
+                        truncated = true;
+                        notes.push(format!("Output cut at {max_chars} character limit."));
+                        break;
+                    }
+                }
+                Err(e) => {
+                    notes.push(format!("Failed to parse page {}: {}", p_idx + 1, e));
+                }
+            }
+        }
+
+        if end_idx < total && !truncated {
+            truncated = true;
+            notes.push(format!(
+                "Showing pages {}-{} of {total}. Set `page_start={}` to read further.",
+                start_idx + 1,
+                end_idx,
+                end_idx + 1
+            ));
+        }
+
+        // Scanned detection: if average text per read page < 25 chars
+        let pages_read_count = end_idx - start_idx;
+        let total_chars = collected_md.trim().chars().count();
+        let scanned_likely = pages_read_count > 0 && (total_chars / pages_read_count < 25);
+
+        if scanned_likely {
+            notes.push(
+                "No extractable text layer found (document appears to be scanned images). Use `pdf_render` for vision/image analysis.".to_string()
+            );
+        }
+
+        let note = (!notes.is_empty()).then(|| notes.join(" "));
+
+        Ok(PdfReadResult {
+            markdown: collected_md,
+            total_pages: total,
+            page_start: start_idx + 1,
+            page_end: end_idx,
+            truncated,
+            note,
+            scanned_likely,
+        })
+    }
+
+    /// Read a PDF file from a path with structured agent options.
+    pub fn read_file<P: AsRef<Path>>(path: P, options: Option<PdfReadOptions>) -> Result<PdfReadResult> {
+        let bytes = fs::read(path)?;
+        Self::read(&bytes, options)
+    }
+
     /// Extract full structured Markdown from in-memory PDF bytes.
     pub fn extract_markdown(pdf_bytes: &[u8]) -> Result<String> {
         let doc = PdfDocument::from_bytes(pdf_bytes.to_vec())

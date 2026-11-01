@@ -8,8 +8,18 @@ pub struct PdfGenerator;
 
 impl PdfGenerator {
     /// Render HTML/CSS to PDF byte vector.
+    /// Injects standard headless fallback fonts if not declared to prevent tofu glyphs.
     pub fn from_html(html: &str) -> Result<Vec<u8>> {
-        fulgur::convert_html(html)
+        let processed_html = if !html.contains("font-family") {
+            format!(
+                "<style>html, body {{ font-family: 'DejaVu Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}</style>\n{}",
+                html
+            )
+        } else {
+            html.to_string()
+        };
+
+        fulgur::convert_html(&processed_html)
             .map_err(|e| PdfError::Generate(format!("Failed to generate PDF from HTML: {}", e)))
     }
 

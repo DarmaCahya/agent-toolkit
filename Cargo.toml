@@ -3,14 +3,30 @@ name = "vizier_pdf"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["reader", "render", "writer"]
+reader = ["dep:pdf_oxide"]
+render = ["dep:hayro", "dep:bytemuck", "dep:image"]
+writer = ["dep:fulgur"]
+
 [dependencies]
-bytemuck = "1.25.2"
-hayro = "0.8.0"
-image = { version = "=0.25.6", default-features = false, features = ["png"] }
-pdf_oxide = "0.3.78"
-fulgur = "0.40.0"
+bytemuck = { version = "1.25.2", optional = true }
+hayro = { version = "0.8.0", optional = true }
+image = { version = "=0.25.6", default-features = false, features = ["png"], optional = true }
+pdf_oxide = { version = "0.3.78", optional = true }
+fulgur = { version = "0.40.0", optional = true }
 thiserror = "2"
+serde = { version = "1.0", features = ["derive"] }
 
 [[bin]]
 name = "vizier_pdf_cli"
 path = "src/main.rs"
+required-features = ["reader", "render", "writer"]
+
+[profile.dev]
+debug = 0
+strip = true
+
+[profile.test]
+debug = 0
+strip = true
