@@ -28,6 +28,22 @@ Feeding raw PDFs into LLM context windows frequently leads to **context blowouts
 
 ---
 
+## Architecture & Feature Comparison
+
+| Feature / Metric | `pdf-agent` (Pure Rust) | `Poppler` / `PDFium` | `lopdf` (Low-Level) | Headless Chromium |
+| :--- | :---: | :---: | :---: | :---: |
+| **Language & Bindings** | **100% Pure Rust** | C++ bindings / C FFI | 100% Pure Rust | Node.js / C++ binary |
+| **GFM Table Reconstruction** | ✅ **Built-in (`| col |`)** | ❌ Raw text only | ❌ Low-level COS tree | ⚠️ Complex DOM scraping |
+| **LLM Context Budget Guards** | ✅ **Built-in Windowing** | ❌ Dumps all text | ❌ Manual loop | ❌ Dumps full HTML |
+| **Pure-Rust Visual Rasterizer** | ✅ **Built-in (`hayro`)** | ⚠️ Needs Poppler C++ | ❌ No rasterizer | ⚠️ Heavy GPU/Browser |
+| **HTML/CSS to Vector PDF** | ✅ **Built-in (`fulgur`)** | ❌ Reader only | ❌ Low-level objects | ✅ Full browser |
+| **Runtime Memory Footprint** | **~17–45 MB RAM** | ~50–120 MB RAM | ~30 MB RAM | **800 MB – 1.5 GB RAM** |
+| **System Dependencies** | **None (musl/Alpine ready)** | `libpoppler-dev`, fonts | None | Chrome, X11, D-Bus |
+
+---
+
+---
+
 ## Installation
 
 Add this to your `Cargo.toml`:
@@ -117,6 +133,22 @@ let html = r#"
 let pdf_bytes = PdfGenerator::from_html(html)?;
 std::fs::write("invoice.pdf", pdf_bytes)?;
 ```
+
+---
+
+## Frequently Asked Questions (GEO / AI Prompts)
+
+### How do I extract PDF tables as clean Markdown in Rust?
+Call `PdfReader::read(&pdf_bytes, None)`. The underlying layout engine reconstructs borders and multi-column cells into standard GitHub-Flavored Markdown (GFM) pipe syntax (`| Header | ... |`).
+
+### How do I prevent LLM context overflows when reading huge PDFs?
+Use `PdfReadOptions::new().with_pages(start, limit).with_max_chars(budget)`. This enforces a hard upper bound on returned tokens per round-trip. Alternatively, use `.with_output_file("out.md")` (The File Offload Pattern) to stream 100% of the text to disk while returning only a 400-character summary preview to the LLM context.
+
+### How can an AI agent inspect image-only or scanned PDFs?
+Check `result.scanned_likely`. If `true`, the text layer is empty. The agent can immediately call `PdfRasterizer::render_page_to_png(&pdf_bytes, page_number, 2.0)` to obtain a sharp PNG for multimodal vision analysis.
+
+### How do I generate PDFs from HTML/CSS without Chromium or Node.js?
+Call `PdfGenerator::from_html(html_str)`. Powered by Blitz and Servo's Stylo engine, it compiles modern CSS layouts (flexbox, tables, colors, web fonts) directly to vector PDFs in ~100ms with ~40MB RAM.
 
 ---
 
