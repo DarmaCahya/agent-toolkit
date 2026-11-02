@@ -2,13 +2,13 @@ use std::env;
 use std::fs;
 use std::process;
 use std::time::Instant;
-use vizier_pdf::{PdfGenerator, PdfRasterizer, PdfReader};
+use pdf_agent::{PdfGenerator, PdfRasterizer, PdfReader};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
         eprintln!(
-            "Usage: vizier_pdf_cli <read|render|generate|cycle|benchmark> [args...]"
+            "Usage: pdf_agent_cli <read|render|generate|cycle|benchmark> [args...]"
         );
         process::exit(1);
     }
@@ -16,7 +16,7 @@ fn main() {
     match args[1].as_str() {
         "read" => {
             if args.len() < 3 {
-                eprintln!("Usage: vizier_pdf_cli read <input.pdf>");
+                eprintln!("Usage: pdf_agent_cli read <input.pdf>");
                 process::exit(1);
             }
             let path = &args[2];
@@ -41,7 +41,7 @@ fn main() {
         }
         "render" => {
             if args.len() < 4 {
-                eprintln!("Usage: vizier_pdf_cli render <input.pdf> <out.png> [scale]");
+                eprintln!("Usage: pdf_agent_cli render <input.pdf> <out.png> [scale]");
                 process::exit(1);
             }
             let input_path = &args[2];
@@ -74,7 +74,7 @@ fn main() {
         }
         "generate" => {
             if args.len() < 4 {
-                eprintln!("Usage: vizier_pdf_cli generate <input.html> <out.pdf>");
+                eprintln!("Usage: pdf_agent_cli generate <input.html> <out.pdf>");
                 process::exit(1);
             }
             let html_path = &args[2];
@@ -103,7 +103,7 @@ fn main() {
         }
         "cycle" => {
             if args.len() < 5 {
-                eprintln!("Usage: vizier_pdf_cli cycle <input.html> <out.pdf> <out.png>");
+                eprintln!("Usage: pdf_agent_cli cycle <input.html> <out.pdf> <out.png>");
                 process::exit(1);
             }
             let html_path = &args[2];

@@ -1,6 +1,6 @@
 use std::fs;
 use std::path::Path;
-use vizier_pdf::{PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader};
+use pdf_agent::{PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader};
 
 fn get_corpus_file(name: &str) -> Vec<u8> {
     let local = Path::new("corpus").join(name);

@@ -1,7 +1,15 @@
 [package]
-name = "vizier_pdf"
+name = "pdf-agent"
 version = "0.1.0"
 edition = "2021"
+authors = ["Darma Cahya <darmady6@gmail.com>"]
+description = "A pure-Rust, memory-guarded PDF facade for AI agents: structured Markdown extraction, visual rasterization, and HTML-to-PDF generation."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/DarmaCahya/unified-crate"
+homepage = "https://github.com/DarmaCahya/unified-crate"
+readme = "README.md"
+keywords = ["pdf", "ai-agent", "markdown", "rasterizer", "html-to-pdf"]
+categories = ["text-processing", "graphics", "parser-implementations"]
 
 [features]
 default = ["reader", "render", "writer"]
@@ -19,7 +27,7 @@ thiserror = "2"
 serde = { version = "1.0", features = ["derive"] }
 
 [[bin]]
-name = "vizier_pdf_cli"
+name = "pdf_agent_cli"
 path = "src/main.rs"
 required-features = ["reader", "render", "writer"]
 

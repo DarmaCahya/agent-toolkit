@@ -2245,6 +2245,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
+name = "pdf-agent"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "fulgur",
+ "hayro",
+ "image",
+ "pdf_oxide",
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "pdf-writer"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3763,19 +3776,6 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
-
-[[package]]
-name = "vizier_pdf"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "fulgur",
- "hayro",
- "image",
- "pdf_oxide",
- "serde",
- "thiserror 2.0.21",
-]
 
 [[package]]
 name = "void"

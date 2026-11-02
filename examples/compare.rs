@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 use std::time::Instant;
-use vizier_pdf::{PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader, PdfError};
+use pdf_agent::{PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader, PdfError};
 
 fn main() {
     println!("============================================================");

@@ -1,5 +1,5 @@
 use std::fs;
-use vizier_pdf::{PdfError, PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader};
+use pdf_agent::{PdfError, PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader};
 
 fn get_table_pdf() -> Vec<u8> {
     fs::read("corpus/table.pdf").expect("read table.pdf")
