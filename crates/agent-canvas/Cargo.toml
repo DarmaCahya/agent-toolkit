@@ -1,0 +1,20 @@
+[package]
+name = "agent-canvas"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Pure-Rust visual computing & calculation artifacts for AI agents: flowcharts, business charts, math typesetting, and Excel logic."
+readme = "README.md"
+keywords = ["ai-agent", "svg", "chart", "diagram", "math"]
+categories = ["graphics", "text-processing", "visualization"]
+
+[dependencies]
+thiserror = "2"
+serde = { version = "1.0", features = ["derive"], optional = true }
+
+[features]
+default = ["serde"]
+serde = ["dep:serde"]
