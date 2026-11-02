@@ -2,6 +2,7 @@
 
 [![crates.io](https://img.shields.io/crates/v/pdf-agent.svg)](https://crates.io/crates/pdf-agent)
 [![Documentation](https://docs.rs/pdf-agent/badge.svg)](https://docs.rs/pdf-agent)
+[![Repository](https://img.shields.io/badge/monorepo-agent--toolkit-blue.svg)](https://github.com/DarmaCahya/agent-toolkit/tree/main/crates/pdf-agent)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
 
 A pure-Rust, memory-guarded PDF facade engineered specifically for **AI Agent Frameworks & LLM Pipelines**.

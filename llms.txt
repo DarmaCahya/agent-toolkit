@@ -78,6 +78,6 @@ std::fs::write("invoice.pdf", pdf_bytes)?;
 
 ## Author & Repository
 - **Crate**: https://crates.io/crates/pdf-agent
-- **Repository**: https://github.com/DarmaCahya/pdf-agent
+- **Repository**: https://github.com/DarmaCahya/agent-toolkit/tree/main/crates/pdf-agent
 - **Author**: Darma Cahya <darmady6@gmail.com>
 - **License**: MIT OR Apache-2.0

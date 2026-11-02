@@ -9,8 +9,8 @@ members = [
 authors = ["Darma Cahya <darmady6@gmail.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/DarmaCahya/pdf-agent"
-homepage = "https://github.com/DarmaCahya/pdf-agent"
+repository = "https://github.com/DarmaCahya/agent-toolkit"
+homepage = "https://github.com/DarmaCahya/agent-toolkit"
 
 [profile.dev]
 debug = 0
