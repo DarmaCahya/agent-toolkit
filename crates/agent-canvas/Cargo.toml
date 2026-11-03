@@ -11,6 +11,10 @@ readme = "README.md"
 keywords = ["ai-agent", "svg", "chart", "diagram", "math"]
 categories = ["graphics", "text-processing", "visualization"]
 
+[[example]]
+name = "issue_006_demo"
+path = "examples/issue-006-demo/main.rs"
+
 [dependencies]
 thiserror = "2"
 serde = { version = "1.0", features = ["derive"], optional = true }
