@@ -165,21 +165,22 @@ impl QuadrantMatrix {
         canvas.draw_text(Point::new(margin_l + 12.0, margin_t + grid_h - 12.0), &self.quadrant_labels.2, font_q, palette.text_secondary(), "start"); // BL
         canvas.draw_text(Point::new(margin_l + grid_w - 12.0, margin_t + grid_h - 12.0), &self.quadrant_labels.3, font_q, palette.text_secondary(), "end"); // BR
 
-        // Axis Titles
+        // Axis Titles: Y-axis title rotated -90 degrees vertically
         canvas.draw_text(
             Point::new(center_x, margin_t + grid_h + 35.0),
-            &format!("{} ➔", self.x_axis_label),
+            &format!("{} ->", self.x_axis_label),
             13.0,
             palette.text_primary(),
             "middle",
         );
 
-        canvas.draw_text(
-            Point::new(margin_l - 25.0, center_y),
-            &format!("▲ {}", self.y_axis_label),
+        canvas.draw_text_rotated(
+            Point::new(margin_l - 40.0, center_y),
+            &format!("^ {}", self.y_axis_label),
             13.0,
             palette.text_primary(),
             "middle",
+            -90.0,
         );
 
         // Scales
