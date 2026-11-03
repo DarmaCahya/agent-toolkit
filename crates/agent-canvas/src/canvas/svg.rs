@@ -10,7 +10,8 @@ use super::theme::Color;
 
 const FONT_FAMILY: &str = "'DejaVu Sans', sans-serif";
 
-/// Escapes the five XML special characters and strips XML-illegal control characters.
+/// Escapes the five XML special characters and strips XML-illegal control characters
+/// and invisible Unicode characters (such as zero-width characters and Unicode tag characters).
 pub fn escape_xml(input: &str) -> String {
     let mut out = String::with_capacity(input.len());
     for c in input.chars() {
@@ -26,6 +27,14 @@ pub fn escape_xml(input: &str) -> String {
             }
             '\u{FFFE}' | '\u{FFFF}' => {
                 // Drop Unicode non-characters
+            }
+            // Strip invisible zero-width characters and formatting controls
+            '\u{200B}'..='\u{200D}' | '\u{2060}' | '\u{FEFF}' | '\u{034F}' => {
+                // Drop invisible zero-width joiners/spaces and grapheme joiners
+            }
+            // Strip Unicode Tags block (U+E0000 - U+E007F) used for invisible text smuggling
+            '\u{E0000}'..='\u{E007F}' => {
+                // Drop invisible tag characters
             }
             _ => out.push(c),
         }
@@ -285,6 +294,9 @@ mod tests {
     fn escapes() {
         assert_eq!(escape_xml("<a href=\"x\">&'</a>"), "&lt;a href=&quot;x&quot;&gt;&amp;&#39;&lt;/a&gt;");
         assert_eq!(escape_xml("Hello\x00World\x07!"), "HelloWorld!");
+        // Verify invisible zero-width and Unicode tag characters are cleanly stripped
+        let with_invisibles = "Clean\u{200B}Text\u{034F}With\u{2060}Zero\u{E0041}Width";
+        assert_eq!(escape_xml(with_invisibles), "CleanTextWithZeroWidth");
     }
 
     #[test]

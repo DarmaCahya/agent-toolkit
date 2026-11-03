@@ -64,6 +64,13 @@ impl PdfReader {
         crate::sandbox::validate_relative_path(path_str, &["md", "markdown", "txt"])
     }
 
+    /// Strips invisible zero-width and Unicode tag characters (U+E0000 - U+E007F) from extracted text.
+    pub fn clean_extracted_text(text: &str) -> String {
+        text.chars()
+            .filter(|&c| !matches!(c, '\u{200B}'..='\u{200D}' | '\u{2060}' | '\u{FEFF}' | '\u{034F}' | '\u{E0000}'..='\u{E007F}'))
+            .collect()
+    }
+
     /// Read a file safely bounded by MAX_PDF_BYTES avoiding TOCTOU & FIFO blocking (T2 & T6)
     fn read_bounded_file<P: AsRef<Path>>(path: P) -> Result<Vec<u8>> {
         let p = path.as_ref();
@@ -149,9 +156,17 @@ impl PdfReader {
                 });
             }
 
+            let p_start = opts.page_start.unwrap_or(1);
+            if p_start == 0 || p_start > total {
+                return Err(PdfError::InvalidPage {
+                    page: p_start,
+                    total,
+                });
+            }
+
             let conv_opts = ConversionOptions::default();
 
-            // 1. File Offload Scenario: User wants 100% full extraction written streaming to disk (T4 & T5)
+            // 1. File Offload Scenario: User wants markdown extraction written streaming to disk (T4 & T5)
             if let Some(ref out_path) = opts.output_file {
                 let safe_path = Self::validate_output_path(out_path)?;
                 if let Some(parent) = safe_path.parent() {
@@ -167,6 +182,10 @@ impl PdfReader {
                     .as_nanos();
                 let tmp_path = safe_path.with_extension(format!("tmp_{}_{}.tmp", std::process::id(), nanos));
 
+                let p_limit = opts.page_limit.unwrap_or(total).max(1);
+                let start_idx = p_start - 1;
+                let end_idx = start_idx.saturating_add(p_limit).min(total);
+
                 let run_offload = (|| -> Result<(usize, Vec<usize>, String)> {
                     let file = File::create(&tmp_path)?;
                     let mut writer = BufWriter::new(file);
@@ -176,10 +195,11 @@ impl PdfReader {
                     let mut failed_pages = Vec::new();
                     let mut preview = String::new();
 
-                    for p_idx in 0..total {
+                    for p_idx in start_idx..end_idx {
                         match doc.to_markdown(p_idx, &conv_opts) {
                             Ok(page_md) => {
-                                let trimmed = page_md.trim();
+                                let cleaned = Self::clean_extracted_text(&page_md);
+                                let trimmed = cleaned.trim();
                                 if !trimmed.is_empty() {
                                     if total_chars > 0 {
                                         write!(writer, "\n\n---\n\n")?;
@@ -229,28 +249,53 @@ impl PdfReader {
                     }
                 };
 
-                let scanned_likely = total > 0 && (total_chars / total < 25);
-                let note = if scanned_likely {
+                let pages_count = end_idx.saturating_sub(start_idx);
+                let scanned_likely = pages_count > 0 && (total_chars / pages_count < 25);
+                let is_full_doc = start_idx == 0 && end_idx == total;
+
+                let note = if is_full_doc {
+                    if scanned_likely {
+                        format!(
+                            "Extracted {total} pages ({total_chars} chars) and saved to {}. Scanned/image-only document suspected. Use `pdf_render` for visual inspection.",
+                            safe_path.display()
+                        )
+                    } else {
+                        format!(
+                            "Extracted full document ({total} pages, {total_chars} chars) and saved to {}. Use search or read_file with offset to inspect.",
+                            safe_path.display()
+                        )
+                    }
+                } else if scanned_likely {
                     format!(
-                        "Extracted {total} pages ({total_chars} chars) and saved to {}. Scanned/image-only document suspected. Use `pdf_render` for visual inspection.",
+                        "Extracted pages {}-{} of {total} ({total_chars} chars) and saved to {}. Scanned/image-only document suspected. Use `pdf_render` for visual inspection.",
+                        start_idx + 1,
+                        end_idx,
                         safe_path.display()
                     )
                 } else {
                     format!(
-                        "Extracted full document ({total} pages, {total_chars} chars) and saved to {}. Use search or read_file with offset to inspect.",
+                        "Extracted pages {}-{} of {total} ({total_chars} chars) and saved to {}. Use search or read_file with offset to inspect.",
+                        start_idx + 1,
+                        end_idx,
                         safe_path.display()
                     )
                 };
 
                 let preview_cut: String = preview.chars().take(400).collect();
+                let truncated = end_idx < total;
+                let next_page_start = if end_idx < total {
+                    Some(end_idx + 1)
+                } else {
+                    None
+                };
 
                 return Ok(PdfReadResult {
                     markdown: preview_cut,
                     total_pages: total,
-                    page_start: 1,
-                    page_end: total,
-                    next_page_start: None,
-                    truncated: false,
+                    page_start: start_idx + 1,
+                    page_end: end_idx,
+                    next_page_start,
+                    truncated,
                     failed_pages,
                     total_chars: Some(total_chars),
                     saved_to: Some(safe_path.display().to_string()),
@@ -260,14 +305,6 @@ impl PdfReader {
             }
 
             // 2. In-Memory Windowed Context Scenario
-            let p_start = opts.page_start.unwrap_or(1);
-            if p_start == 0 || p_start > total {
-                return Err(PdfError::InvalidPage {
-                    page: p_start,
-                    total,
-                });
-            }
-
             let p_limit = opts.page_limit.unwrap_or(10).max(1);
             let max_chars = opts.max_chars.unwrap_or(100_000);
 
@@ -287,7 +324,8 @@ impl PdfReader {
             for p_idx in start_idx..end_idx {
                 match doc.to_markdown(p_idx, &conv_opts) {
                     Ok(page_md) => {
-                        let trimmed = page_md.trim();
+                        let cleaned = Self::clean_extracted_text(&page_md);
+                        let trimmed = cleaned.trim();
                         if !trimmed.is_empty() {
                             if !collected_md.is_empty() {
                                 collected_md.push_str("\n\n---\n\n");
@@ -380,7 +418,7 @@ impl PdfReader {
                     MAX_ALLOWED_CHAR_BUDGET
                 )));
             }
-            Ok(md)
+            Ok(Self::clean_extracted_text(&md))
         })
     }
 
@@ -417,14 +455,19 @@ impl PdfReader {
                     page_number, count, MAX_ALLOWED_CHAR_BUDGET
                 )));
             }
-            Ok(md)
+            Ok(Self::clean_extracted_text(&md))
         })
     }
 
     /// Get the total number of pages in the PDF document.
     pub fn page_count(pdf_bytes: &[u8]) -> Result<usize> {
+        Self::page_count_with_password(pdf_bytes, None)
+    }
+
+    /// Get the total number of pages in the PDF document with optional decryption password.
+    pub fn page_count_with_password(pdf_bytes: &[u8], password: Option<&str>) -> Result<usize> {
         guarded(|| {
-            let doc = Self::open_doc(pdf_bytes, None)?;
+            let doc = Self::open_doc(pdf_bytes, password)?;
             doc.page_count()
                 .map_err(|e| PdfError::Read(format!("Failed to count pages: {}", e)))
         })
@@ -433,13 +476,22 @@ impl PdfReader {
     /// Search for a keyword across all pages. Returns a list of 1-indexed page numbers where the query appears.
     /// This allows AI agents to instantly locate relevant pages without reading hundreds of pages into context.
     pub fn search_keyword(pdf_bytes: &[u8], query: &str) -> Result<Vec<usize>> {
+        Self::search_keyword_with_password(pdf_bytes, query, None)
+    }
+
+    /// Search for a keyword across all pages with optional decryption password.
+    pub fn search_keyword_with_password(
+        pdf_bytes: &[u8],
+        query: &str,
+        password: Option<&str>,
+    ) -> Result<Vec<usize>> {
         let trimmed_query = query.trim();
         if trimmed_query.is_empty() {
             return Err(PdfError::InvalidArgument("Search query cannot be empty".to_string()));
         }
 
         guarded(|| {
-            let doc = Self::open_doc(pdf_bytes, None)?;
+            let doc = Self::open_doc(pdf_bytes, password)?;
             let total = doc
                 .page_count()
                 .map_err(|e| PdfError::Read(format!("Failed to get page count: {}", e)))?;
@@ -463,8 +515,16 @@ impl PdfReader {
     /// Extract document structure and headings (`# Heading 1`, `## Heading 2`, etc.) with their 1-indexed page numbers.
     /// Returns `Vec<(page_number, heading_text)>`.
     pub fn extract_headings(pdf_bytes: &[u8]) -> Result<Vec<(usize, String)>> {
+        Self::extract_headings_with_password(pdf_bytes, None)
+    }
+
+    /// Extract document structure and headings with optional decryption password.
+    pub fn extract_headings_with_password(
+        pdf_bytes: &[u8],
+        password: Option<&str>,
+    ) -> Result<Vec<(usize, String)>> {
         guarded(|| {
-            let doc = Self::open_doc(pdf_bytes, None)?;
+            let doc = Self::open_doc(pdf_bytes, password)?;
             let total = doc
                 .page_count()
                 .map_err(|e| PdfError::Read(format!("Failed to get page count: {}", e)))?;
