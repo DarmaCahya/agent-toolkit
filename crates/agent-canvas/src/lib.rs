@@ -13,10 +13,17 @@
 //! - `component`: QR Code vector generator and KPI metric cards.
 
 pub mod canvas;
+pub mod chart;
 pub mod error;
+pub mod math;
 
 pub use canvas::{
     Color, Fill, FontMetrics, Palette, Path, PathCommand, Point, Rect, Size, Stroke, SvgCanvas,
     ThemeMode,
 };
+pub use chart::{
+    BarChart, BarSeries, CartesianPlot, DonutChart, DonutSlice, FunnelChart, FunnelStage,
+    LineChart, LineSeries, QuadrantItem, QuadrantMatrix, Sparkline, WaterfallChart, WaterfallItem,
+};
 pub use error::{CanvasError, Result};
+pub use math::{calculate_slice_angles, CategoryScale, LinearScale, TickGenerator};
