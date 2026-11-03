@@ -1,0 +1,82 @@
+# agent-toolkit: Full Context Reference for AI Agents
+
+> Complete, consolidated specification of the `agent-toolkit` monorepo containing `pdf-agent` and `agent-canvas`. Designed for single-pass ingestion by LLMs and AI crawlers.
+
+---
+
+# Crate 1: `pdf-agent` (v0.1.0)
+- **Crates.io**: https://crates.io/crates/pdf-agent
+- **Docs.rs**: https://docs.rs/pdf-agent
+- **Source**: crates/pdf-agent
+
+## Architecture
+`pdf-agent` is a high-level facade combining three pure-Rust engines behind an opaque, memory-guarded interface:
+1. `pdf_oxide 0.3.78`: Text and table layout extraction to GitHub-Flavored Markdown.
+2. `hayro 0.8.0`: CPU-based visual rasterization to RGBA/PNG without C++ or Poppler.
+3. `fulgur 0.40.0`: Headless HTML/CSS vector PDF generation powered by Blitz & Krilla.
+
+## Security & Agent Protections
+- **Sandboxed Paths**: Output files and PNG saves reject directory traversal (`..`), absolute root paths, drive prefixes, and Windows Alternate Data Streams (`:`).
+- **Symlink Protection**: Explicit rejection of symlink targets via `symlink_metadata` to prevent sandbox escape.
+- **Race-Free Atomic Writes**: Concurrent multi-agent writes stream to `.tmp_{pid}_{nanos}_{counter}.tmp` with `sync_all()` before atomic rename.
+- **Pre-Render Allocation Guard**: Pre-calculates target page dimensions against `MAX_PAGE_PIXELS = 25,000,000` (25 MP) before allocation, preventing memory bombs.
+- **Password Masking**: Document passwords are redacted as `[REDACTED]` in `Debug` and excluded from `serde` serialization.
+- **Decompression Bomb Guard**: `MAX_ALLOWED_CHAR_BUDGET = 500,000` chars (~125k tokens) on single-turn in-memory extractions.
+
+## API Usage Examples
+
+```rust
+use pdf_agent::{PdfReader, PdfReadOptions, PdfRasterizer, PdfGenerator};
+
+// 1. In-Memory Windowed Reading
+let bytes = std::fs::read("doc.pdf")?;
+let opts = PdfReadOptions::new().with_pages(1, 10).with_max_chars(100_000);
+let result = PdfReader::read(&bytes, Some(opts))?;
+
+// 2. Full Document File Offload
+let offload_opts = PdfReadOptions::new().with_output_file("target/out.md");
+let offload_res = PdfReader::read(&bytes, Some(offload_opts))?;
+
+// 3. Rasterization for Vision Models
+let png_bytes = PdfRasterizer::render_page_to_png(&bytes, 1, 2.0)?;
+
+// 4. HTML to PDF
+let pdf = PdfGenerator::from_html("<h1>Hello Agent</h1>")?;
+```
+
+---
+
+# Crate 2: `agent-canvas` (v0.1.0 - In Development)
+- **Source**: crates/agent-canvas
+
+## Architecture
+`agent-canvas` is built from first principles (no browser, no Python, no JS runtime) to produce deterministic SVG vectors across four pillars:
+
+1. **`graph`**: Flowcharts, decision trees, sequence diagrams, and architecture blocks with Manhattan 90° routing.
+2. **`chart`**: Executive business graphics (Donut, 2x2 Quadrant Matrix, Sales Funnel, Stacked/Grouped Bars).
+3. **`math`**: LaTeX math box-model typesetting to SVG path curves + pure-Rust Excel formula evaluator (`=SUM`, `=IF`, `=AVERAGE`).
+4. **`component`**: Pure-Rust QR Code matrix generator (Reed-Solomon) and KPI executive metric cards.
+
+## Color Palette
+Employs an Okabe-Ito / Tremor categorical palette with cyclic auto-assignment:
+- Sapphire Blue: `#2563EB`
+- Emerald Green: `#059669`
+- Amber Orange: `#D97706`
+- Rose Crimson: `#E11D48`
+- Indigo: `#4F46E5`
+- Teal: `#0D9488`
+- Slate: `#475569`
+- Violet: `#7C3AED`
+
+---
+
+# Master Roadmap & Issue Tracking
+1. `[pdf-agent] Support page range windowing in file offload mode (output_file)` (Issue #1)
+2. `[pdf-agent] Add batch multi-page rendering to PdfRasterizer` (Issue #2)
+3. `[pdf-agent] Support password decryption across utility methods` (Issue #3)
+4. `[pdf-agent] Case-insensitive HTML font fallback injection in PdfGenerator` (Issue #4)
+5. `[pdf-agent] Add agent_hint() and is_retryable() methods to PdfError` (Issue #5)
+6. `[agent-canvas] Core Geometric Primitives & SVG Writer` (Issue #6)
+7. `[agent-canvas] Executive Donut & Quadrant Charts` (Issue #7)
+8. `[agent-canvas] Flowchart DSL & Manhattan Routing` (Issue #8)
+9. `[agent-canvas] LaTeX Math Typesetting & Excel Evaluator` (Issue #9)
