@@ -1,0 +1,53 @@
+name: CI PR Check & Auto Merge
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-and-verify:
+    name: Build, Test & Clippy Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache cargo registry & build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Check Workspace
+        run: cargo check --workspace
+
+      - name: Run All Tests
+        run: cargo test --workspace
+
+      - name: Run Clippy Linter
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Bot Auto-Approve & Merge PR
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "All checks passed. Auto-approving PR #${{ github.event.pull_request.number }}..."
+          gh pr review ${{ github.event.pull_request.number }} --approve --body "🤖 **Agent Toolkit Bot:** All CI checks passed (cargo check, test, clippy clean). Auto-approved!" || true
+          echo "Merging PR #${{ github.event.pull_request.number }}..."
+          gh pr merge ${{ github.event.pull_request.number }} --squash --auto --delete-branch || gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch || true
