@@ -26,6 +26,60 @@ pub enum PdfError {
 
     #[error("Safety limit exceeded: {0}")]
     LimitExceeded(String),
+
+    #[error("Sandbox constraint violation: {0}")]
+    Sandbox(String),
+
+    #[error("Invalid PDF stream format: {0}")]
+    InvalidPdf(String),
+}
+
+impl PdfError {
+    /// Returns true if this error represents a recoverable or parameter-tunable condition
+    /// (e.g. pagination out-of-bounds, character limits exceeded, or password required).
+    pub fn is_retryable(&self) -> bool {
+        match self {
+            PdfError::LimitExceeded(_)
+            | PdfError::Encrypted(_)
+            | PdfError::InvalidPage { .. }
+            | PdfError::InvalidArgument(_)
+            | PdfError::Sandbox(_) => true,
+            PdfError::Io(io_err) => {
+                matches!(
+                    io_err.kind(),
+                    std::io::ErrorKind::TimedOut
+                        | std::io::ErrorKind::Interrupted
+                        | std::io::ErrorKind::WouldBlock
+                )
+            }
+            PdfError::Read(_) | PdfError::Render(_) | PdfError::Generate(_) | PdfError::InvalidPdf(_) => false,
+        }
+    }
+
+    /// Returns an agent-centric prompt instruction for autonomous recovery.
+    pub fn agent_hint(&self) -> Option<&'static str> {
+        match self {
+            PdfError::LimitExceeded(_) => {
+                Some("Reduce page_limit or use output_file to offload document.")
+            }
+            PdfError::Encrypted(_) => {
+                Some("Document is password-protected. Provide the decryption password in PdfReadOptions.")
+            }
+            PdfError::InvalidPage { .. } => {
+                Some("Requested page is out of bounds. Check page_count() before requesting page ranges.")
+            }
+            PdfError::InvalidArgument(_) => {
+                Some("Invalid argument provided. Verify input parameters and file paths.")
+            }
+            PdfError::Sandbox(_) => {
+                Some("File path violates sandbox constraints. Use relative paths within working directory.")
+            }
+            PdfError::InvalidPdf(_) | PdfError::Read(_) => {
+                Some("Unrecoverable PDF syntax error. Inspect document integrity or provide a different file.")
+            }
+            _ => None,
+        }
+    }
 }
 
 pub type Result<T> = std::result::Result<T, PdfError>;

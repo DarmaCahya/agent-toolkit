@@ -1,6 +1,6 @@
 [package]
 name = "pdf-agent"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Darma Cahya <darmady6@gmail.com>"]
 description = "A pure-Rust, memory-guarded PDF facade for AI agents: structured Markdown extraction, visual rasterization, and HTML-to-PDF generation."

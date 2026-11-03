@@ -250,6 +250,14 @@ impl PdfReader {
                 };
 
                 let pages_count = end_idx.saturating_sub(start_idx);
+                if pages_count > 0 && failed_pages.len() == pages_count && total_chars == 0 {
+                    let _ = fs::remove_file(&safe_path);
+                    return Err(PdfError::Read(format!(
+                        "Failed to parse all requested offload pages ({} of {}): corrupted or unreadable PDF stream",
+                        failed_pages.len(),
+                        pages_count
+                    )));
+                }
                 let scanned_likely = pages_count > 0 && (total_chars / pages_count < 25);
                 let is_full_doc = start_idx == 0 && end_idx == total;
 
@@ -374,6 +382,16 @@ impl PdfReader {
                 notes.push(
                     "No extractable text layer found (document appears to be scanned images). Use `pdf_render` for vision/image analysis.".to_string(),
                 );
+            }
+
+            let requested_count = end_idx.saturating_sub(start_idx);
+            if requested_count > 0 && failed_pages.len() == requested_count && collected_md.is_empty() {
+                return Err(PdfError::Read(format!(
+                    "Failed to parse all requested pages ({} of {}): {}",
+                    failed_pages.len(),
+                    requested_count,
+                    notes.join("; ")
+                )));
             }
 
             let note = (!notes.is_empty()).then(|| notes.join(" "));
