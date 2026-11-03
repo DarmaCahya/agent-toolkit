@@ -142,6 +142,13 @@ fn test_edge_generator_rich_unicode_and_svg() {
 }
 
 #[test]
+fn test_clean_extracted_text_strips_invisibles() {
+    let dirty = "Heading 1\u{200B}\n\nThis is text\u{E0041}\u{E0042} with\u{034F} tags\u{2060}!";
+    let clean = PdfReader::clean_extracted_text(dirty);
+    assert_eq!(clean, "Heading 1\n\nThis is text with tags!");
+}
+
+#[test]
 fn test_keyword_search_across_pages() {
     let bytes = get_table_pdf();
     let matches = PdfReader::search_keyword(&bytes, "Revenue").expect("Search keyword");
