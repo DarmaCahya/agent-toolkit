@@ -14,9 +14,11 @@
 
 pub mod canvas;
 pub mod error;
+pub mod math;
 
 pub use canvas::{
     Color, Fill, FontMetrics, Palette, Path, PathCommand, Point, Rect, Size, Stroke, SvgCanvas,
     ThemeMode,
 };
 pub use error::{CanvasError, Result};
+pub use math::{calculate_slice_angles, CategoryScale, LinearScale, TickGenerator};
