@@ -5,6 +5,8 @@ members = [
     "crates/agent-canvas",
 ]
 
+default-members = ["crates/pdf-agent", "crates/agent-canvas"]
+
 [workspace.package]
 authors = ["Darma Cahya <darmady6@gmail.com>"]
 edition = "2021"

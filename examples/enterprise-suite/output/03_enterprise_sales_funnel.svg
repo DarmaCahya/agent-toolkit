@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="480" viewBox="0 0 700 480">
+<rect x="0" y="0" width="700" height="480" fill="#0F172A"/>
+<text x="40" y="45" font-family="'DejaVu Sans', sans-serif" font-size="18" text-anchor="start" fill="#F1F5F9">Pipeline Akuisisi Merchant Enterprise Q4</text>
+<path d="M80 80 L520 80 L437.887 147.2 L162.113 147.2 Z" fill="#2563EB"/>
+<text x="300" y="117.6" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#FFFFFF">Leads Terkualifikasi (14200)</text>
+<path d="M162.113 153.2 L437.887 153.2 L371.268 220.4 L228.732 220.4 Z" fill="#059669"/>
+<text x="300" y="190.8" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#FFFFFF">Verifikasi Legal &amp; Dokumen (8900)</text>
+<text x="535" y="163.2" font-family="'DejaVu Sans', sans-serif" font-size="12" text-anchor="start" fill="#94A3B8">62.7% conv</text>
+<path d="M228.732 226.4 L371.268 226.4 L333.31 293.6 L266.69 293.6 Z" fill="#D97706"/>
+<text x="300" y="264" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#FFFFFF">Demo Produk &amp; Pilot Sandbox (4600)</text>
+<text x="535" y="236.4" font-family="'DejaVu Sans', sans-serif" font-size="12" text-anchor="start" fill="#94A3B8">51.7% conv</text>
+<path d="M266.69 299.6 L333.31 299.6 L319.831 366.8 L280.169 366.8 Z" fill="#E11D48"/>
+<text x="254.69" y="337.2" font-family="'DejaVu Sans', sans-serif" font-size="12" text-anchor="end" fill="#F1F5F9">Negosiasi Kontrak &amp; SLA (2150)</text>
+<text x="535" y="309.6" font-family="'DejaVu Sans', sans-serif" font-size="12" text-anchor="start" fill="#94A3B8">46.7% conv</text>
+<path d="M280.169 372.8 L319.831 372.8 L315 440 L285 440 Z" fill="#4F46E5"/>
+<text x="268.169" y="410.4" font-family="'DejaVu Sans', sans-serif" font-size="12" text-anchor="end" fill="#F1F5F9">Akad &amp; Go-Live Produksi (1280)</text>
+<text x="535" y="382.8" font-family="'DejaVu Sans', sans-serif" font-size="12" text-anchor="start" fill="#94A3B8">59.5% conv</text>
+</svg>

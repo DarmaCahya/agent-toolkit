@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="480" viewBox="0 0 820 480">
+<rect x="0" y="0" width="820" height="480" fill="#0F172A"/>
+<text x="40" y="45" font-family="'DejaVu Sans', sans-serif" font-size="18" text-anchor="start" fill="#F1F5F9">Alokasi Portofolio Kas &amp; Treasury Holding Q4 (Total IDR 12.8 T)</text>
+<path d="M229.6 96 A168 168 0 0 1 348.394 382.794 L298.5 332.9 A97.44 97.44 0 0 0 229.6 166.56 Z" fill="#2563EB" stroke="#0F172A" stroke-width="2"/>
+<rect x="426.4" y="152" width="12" height="12" rx="2" ry="2" fill="#2563EB"/>
+<text x="446.4" y="162" font-family="'DejaVu Sans', sans-serif" font-size="11.5" text-anchor="start" fill="#F1F5F9">Surat Berharga Negara (SBN) (37.5%)</text>
+<path d="M348.394 382.794 A168 168 0 0 1 157.771 415.87 L187.939 352.085 A97.44 97.44 0 0 0 298.5 332.9 Z" fill="#059669" stroke="#0F172A" stroke-width="2"/>
+<rect x="426.4" y="180" width="12" height="12" rx="2" ry="2" fill="#059669"/>
+<text x="446.4" y="190" font-family="'DejaVu Sans', sans-serif" font-size="11.5" text-anchor="start" fill="#F1F5F9">Deposito On Call (BUMN) (19.5%)</text>
+<path d="M157.771 415.87 A168 168 0 0 1 66.635 304.821 L135.08 287.676 A97.44 97.44 0 0 0 187.939 352.085 Z" fill="#D97706" stroke="#0F172A" stroke-width="2"/>
+<rect x="426.4" y="208" width="12" height="12" rx="2" ry="2" fill="#D97706"/>
+<text x="446.4" y="218" font-family="'DejaVu Sans', sans-serif" font-size="11.5" text-anchor="start" fill="#F1F5F9">Obligasi Korporasi AAA (14.1%)</text>
+<path d="M66.635 304.821 A168 168 0 0 1 77.73 192.171 L141.515 222.339 A97.44 97.44 0 0 0 135.08 287.676 Z" fill="#E11D48" stroke="#0F172A" stroke-width="2"/>
+<rect x="426.4" y="236" width="12" height="12" rx="2" ry="2" fill="#E11D48"/>
+<text x="446.4" y="246" font-family="'DejaVu Sans', sans-serif" font-size="11.5" text-anchor="start" fill="#F1F5F9">Saham Bluechip LQ45 (10.9%)</text>
+<path d="M77.73 192.171 A168 168 0 0 1 126.241 131.558 L169.652 187.184 A97.44 97.44 0 0 0 141.515 222.339 Z" fill="#4F46E5" stroke="#0F172A" stroke-width="2"/>
+<rect x="426.4" y="264" width="12" height="12" rx="2" ry="2" fill="#4F46E5"/>
+<text x="446.4" y="274" font-family="'DejaVu Sans', sans-serif" font-size="11.5" text-anchor="start" fill="#F1F5F9">Pasar Uang Syariah (7.4%)</text>
+<path d="M126.241 131.558 A168 168 0 0 1 180.832 103.234 L201.315 170.756 A97.44 97.44 0 0 0 169.652 187.184 Z" fill="#0D9488" stroke="#0F172A" stroke-width="2"/>
+<rect x="426.4" y="292" width="12" height="12" rx="2" ry="2" fill="#0D9488"/>
+<text x="446.4" y="302" font-family="'DejaVu Sans', sans-serif" font-size="11.5" text-anchor="start" fill="#F1F5F9">Valuta Asing (USD/SGD) (5.9%)</text>
+<path d="M180.832 103.234 A168 168 0 0 1 213.133 96.809 L220.049 167.029 A97.44 97.44 0 0 0 201.315 170.756 Z" fill="#475569" stroke="#0F172A" stroke-width="2"/>
+<rect x="426.4" y="320" width="12" height="12" rx="2" ry="2" fill="#475569"/>
+<text x="446.4" y="330" font-family="'DejaVu Sans', sans-serif" font-size="11.5" text-anchor="start" fill="#F1F5F9">Hedging Komoditas (3.1%)</text>
+<path d="M213.133 96.809 A168 168 0 0 1 229.6 96 L229.6 166.56 A97.44 97.44 0 0 0 220.049 167.029 Z" fill="#7C3AED" stroke="#0F172A" stroke-width="2"/>
+<rect x="426.4" y="348" width="12" height="12" rx="2" ry="2" fill="#7C3AED"/>
+<text x="446.4" y="358" font-family="'DejaVu Sans', sans-serif" font-size="11.5" text-anchor="start" fill="#F1F5F9">Cadangan Kas Darurat (1.6%)</text>
+<text x="229.6" y="258" font-family="'DejaVu Sans', sans-serif" font-size="17" text-anchor="middle" fill="#F1F5F9">IDR 12.8 T</text>
+<text x="229.6" y="280" font-family="'DejaVu Sans', sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Kas Konsolidasi</text>
+</svg>
