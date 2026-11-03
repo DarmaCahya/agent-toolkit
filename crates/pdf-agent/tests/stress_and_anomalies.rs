@@ -5,12 +5,24 @@ use std::thread;
 use pdf_agent::{PdfError, PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader};
 
 fn get_corpus_file(name: &str) -> Vec<u8> {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    let manifest_path = Path::new(manifest_dir).join("corpus").join(name);
+    if manifest_path.exists() {
+        return fs::read(&manifest_path).unwrap();
+    }
     let local = Path::new("corpus").join(name);
     if local.exists() {
-        return fs::read(local).unwrap();
+        return fs::read(&local).unwrap();
+    }
+    let crate_local = Path::new("crates/pdf-agent/corpus").join(name);
+    if crate_local.exists() {
+        return fs::read(&crate_local).unwrap();
     }
     let global = Path::new("/srv/hermes/workspace/pdf-benchmarks/corpus").join(name);
-    fs::read(global).unwrap()
+    if global.exists() {
+        return fs::read(&global).unwrap();
+    }
+    panic!("Corpus file not found: {}", name);
 }
 
 // =========================================================================
