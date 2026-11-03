@@ -147,17 +147,30 @@ impl CartesianPlot {
             }
         }
 
-        // 3. Draw Category Labels on X-axis
+        // 3. Draw Category Labels on X-axis (rotate 30 degrees if label is long or many categories)
+        let should_rotate = self.x_categories.iter().any(|c| c.len() > 8) || self.x_categories.len() > 5;
         for (i, cat) in self.x_categories.iter().enumerate() {
             let x_pos = cat_scale.map_center(i);
             if x_pos.is_finite() {
-                canvas.draw_text(
-                    Point::new(x_pos, plot_rect.origin.y + plot_rect.size.height + 20.0),
-                    cat,
-                    12.0,
-                    palette.text_secondary(),
-                    "middle",
-                );
+                let y_base = plot_rect.origin.y + plot_rect.size.height + 18.0;
+                if should_rotate {
+                    canvas.draw_text_rotated(
+                        Point::new(x_pos, y_base),
+                        cat,
+                        11.0,
+                        palette.text_secondary(),
+                        "end",
+                        -35.0,
+                    );
+                } else {
+                    canvas.draw_text(
+                        Point::new(x_pos, y_base),
+                        cat,
+                        12.0,
+                        palette.text_secondary(),
+                        "middle",
+                    );
+                }
             }
         }
 

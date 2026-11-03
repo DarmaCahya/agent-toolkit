@@ -1,30 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="750" height="450" viewBox="0 0 750 450">
 <rect x="0" y="0" width="750" height="450" fill="#0F172A"/>
-<text x="70" y="35" font-family="Inter, Roboto, Arial, sans-serif" font-size="18" text-anchor="start" fill="#F1F5F9">Jembatan Arus Kas &amp; Laba Bersih Operasional (IDR Juta)</text>
-<line x1="70" y1="400" x2="720" y2="400" stroke="#1E293B" stroke-width="1"/>
-<text x="60" y="404" font-family="Inter, Roboto, Arial, sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">0</text>
-<line x1="70" y1="286.667" x2="720" y2="286.667" stroke="#1E293B" stroke-width="1"/>
-<text x="60" y="290.667" font-family="Inter, Roboto, Arial, sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">100</text>
-<line x1="70" y1="173.333" x2="720" y2="173.333" stroke="#1E293B" stroke-width="1"/>
-<text x="60" y="177.333" font-family="Inter, Roboto, Arial, sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">200</text>
+<text x="70" y="35" font-family="'DejaVu Sans', sans-serif" font-size="18" text-anchor="start" fill="#F1F5F9">Jembatan Arus Kas &amp; Laba Bersih Operasional (IDR Juta)</text>
+<line x1="70" y1="375" x2="720" y2="375" stroke="#1E293B" stroke-width="1"/>
+<text x="60" y="379" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">0</text>
+<line x1="70" y1="270" x2="720" y2="270" stroke="#1E293B" stroke-width="1"/>
+<text x="60" y="274" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">100</text>
+<line x1="70" y1="165" x2="720" y2="165" stroke="#1E293B" stroke-width="1"/>
+<text x="60" y="169" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">200</text>
 <line x1="70" y1="60" x2="720" y2="60" stroke="#1E293B" stroke-width="1"/>
-<text x="60" y="64" font-family="Inter, Roboto, Arial, sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">300</text>
-<text x="124.167" y="420" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Gross Revenue Proyek</text>
-<text x="232.5" y="420" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Biaya Server &amp; Cloudflare</text>
-<text x="340.833" y="420" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Gaji Tim &amp; Engineer</text>
-<text x="449.167" y="420" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Operasional &amp; Marketing</text>
-<text x="557.5" y="420" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Pajak &amp; Retribusi</text>
-<text x="665.833" y="420" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Net Profit Bersih</text>
-<line x1="70" y1="400" x2="720" y2="400" stroke="#334155" stroke-width="1.5"/>
-<rect x="91.667" y="128" width="65" height="272" rx="3" ry="3" fill="#10B981" fill-opacity="0.95"/>
-<line x1="156.667" y1="128" x2="200" y2="128" stroke="#334155" stroke-width="1"/>
-<rect x="200" y="128" width="65" height="31.733" rx="3" ry="3" fill="#EF4444" fill-opacity="0.95"/>
-<line x1="265" y1="159.733" x2="308.333" y2="159.733" stroke="#334155" stroke-width="1"/>
-<rect x="308.333" y="159.733" width="65" height="107.667" rx="3" ry="3" fill="#EF4444" fill-opacity="0.95"/>
-<line x1="373.333" y1="267.4" x2="416.667" y2="267.4" stroke="#334155" stroke-width="1"/>
-<rect x="416.667" y="267.4" width="65" height="36.267" rx="3" ry="3" fill="#EF4444" fill-opacity="0.95"/>
-<line x1="481.667" y1="303.667" x2="525" y2="303.667" stroke="#334155" stroke-width="1"/>
-<rect x="525" y="303.667" width="65" height="17" rx="3" ry="3" fill="#EF4444" fill-opacity="0.95"/>
-<line x1="590" y1="320.667" x2="633.333" y2="320.667" stroke="#334155" stroke-width="1"/>
-<rect x="633.333" y="320.667" width="65" height="79.333" rx="3" ry="3" fill="#2563EB" fill-opacity="0.95"/>
+<text x="60" y="64" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">300</text>
+<text x="124.167" y="393" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" transform="rotate(-35, 124.167, 393)" fill="#94A3B8">Gross Revenue Proyek</text>
+<text x="232.5" y="393" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" transform="rotate(-35, 232.5, 393)" fill="#94A3B8">Biaya Server &amp; Cloudflare</text>
+<text x="340.833" y="393" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" transform="rotate(-35, 340.833, 393)" fill="#94A3B8">Gaji Tim &amp; Engineer</text>
+<text x="449.167" y="393" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" transform="rotate(-35, 449.167, 393)" fill="#94A3B8">Operasional &amp; Marketing</text>
+<text x="557.5" y="393" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" transform="rotate(-35, 557.5, 393)" fill="#94A3B8">Pajak &amp; Retribusi</text>
+<text x="665.833" y="393" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" transform="rotate(-35, 665.833, 393)" fill="#94A3B8">Net Profit Bersih</text>
+<line x1="70" y1="375" x2="720" y2="375" stroke="#334155" stroke-width="1.5"/>
+<rect x="91.667" y="123" width="65" height="252" rx="3" ry="3" fill="#10B981" fill-opacity="0.95"/>
+<text x="124.167" y="117" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="middle" fill="#F1F5F9">+240</text>
+<line x1="156.667" y1="123" x2="200" y2="123" stroke="#334155" stroke-width="1"/>
+<rect x="200" y="123" width="65" height="29.4" rx="3" ry="3" fill="#EF4444" fill-opacity="0.95"/>
+<text x="232.5" y="117" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="middle" fill="#F1F5F9">-28</text>
+<line x1="265" y1="152.4" x2="308.333" y2="152.4" stroke="#334155" stroke-width="1"/>
+<rect x="308.333" y="152.4" width="65" height="99.75" rx="3" ry="3" fill="#EF4444" fill-opacity="0.95"/>
+<text x="340.833" y="146.4" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="middle" fill="#F1F5F9">-95</text>
+<line x1="373.333" y1="252.15" x2="416.667" y2="252.15" stroke="#334155" stroke-width="1"/>
+<rect x="416.667" y="252.15" width="65" height="33.6" rx="3" ry="3" fill="#EF4444" fill-opacity="0.95"/>
+<text x="449.167" y="246.15" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="middle" fill="#F1F5F9">-32</text>
+<line x1="481.667" y1="285.75" x2="525" y2="285.75" stroke="#334155" stroke-width="1"/>
+<rect x="525" y="285.75" width="65" height="15.75" rx="3" ry="3" fill="#EF4444" fill-opacity="0.95"/>
+<text x="557.5" y="279.75" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="middle" fill="#F1F5F9">-15</text>
+<line x1="590" y1="301.5" x2="633.333" y2="301.5" stroke="#334155" stroke-width="1"/>
+<rect x="633.333" y="301.5" width="65" height="73.5" rx="3" ry="3" fill="#2563EB" fill-opacity="0.95"/>
+<text x="665.833" y="295.5" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="middle" fill="#F1F5F9">70</text>
 </svg>

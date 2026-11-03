@@ -8,7 +8,7 @@
 use super::geom::{fmt_num, Fill, Path, Point, Rect, Stroke};
 use super::theme::Color;
 
-const FONT_FAMILY: &str = "Inter, Roboto, Arial, sans-serif";
+const FONT_FAMILY: &str = "'DejaVu Sans', sans-serif";
 
 /// Escapes the five XML special characters and strips XML-illegal control characters.
 pub fn escape_xml(input: &str) -> String {
@@ -186,6 +186,41 @@ impl SvgCanvas {
             FONT_FAMILY,
             fmt_num(font_size),
             anchor,
+            fill_attrs(Some(&Fill::solid(color)))
+        );
+        el.push('>');
+        el.push_str(&escape_xml(text));
+        el.push_str("</text>");
+        self.elements.push(el);
+    }
+
+    /// Draws rotated text (e.g. for vertical Y-axis labels, slanting X-axis categories).
+    pub fn draw_text_rotated(
+        &mut self,
+        pos: Point,
+        text: &str,
+        font_size: f32,
+        color: Color,
+        text_anchor: &str,
+        angle_deg: f32,
+    ) {
+        if !pos.is_finite() || !font_size.is_finite() || font_size <= 0.0 || !angle_deg.is_finite() {
+            return;
+        }
+        let anchor = match text_anchor {
+            "middle" | "end" => text_anchor,
+            _ => "start",
+        };
+        let mut el = format!(
+            "<text x=\"{}\" y=\"{}\" font-family=\"{}\" font-size=\"{}\" text-anchor=\"{}\" transform=\"rotate({}, {}, {})\"{}",
+            fmt_num(pos.x),
+            fmt_num(pos.y),
+            FONT_FAMILY,
+            fmt_num(font_size),
+            anchor,
+            fmt_num(angle_deg),
+            fmt_num(pos.x),
+            fmt_num(pos.y),
             fill_attrs(Some(&Fill::solid(color)))
         );
         el.push('>');

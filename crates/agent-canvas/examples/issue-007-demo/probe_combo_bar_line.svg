@@ -1,20 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="480">
 <rect x="0" y="0" width="800" height="480" fill="#0F172A"/>
-<text x="70" y="35" font-family="Inter, Roboto, Arial, sans-serif" font-size="18" text-anchor="start" fill="#F1F5F9">Kinerja Bisnis 2026: Realisasi Omzet vs Target RKAP (Juta IDR)</text>
+<text x="70" y="35" font-family="'DejaVu Sans', sans-serif" font-size="18" text-anchor="start" fill="#F1F5F9">Kinerja Bisnis 2026: Realisasi Omzet vs Target RKAP (Juta IDR)</text>
 <line x1="70" y1="430" x2="770" y2="430" stroke="#1E293B" stroke-width="1"/>
-<text x="60" y="434" font-family="Inter, Roboto, Arial, sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">0</text>
+<text x="60" y="434" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">0</text>
 <line x1="70" y1="337.5" x2="770" y2="337.5" stroke="#1E293B" stroke-width="1"/>
-<text x="60" y="341.5" font-family="Inter, Roboto, Arial, sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">100</text>
+<text x="60" y="341.5" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">100</text>
 <line x1="70" y1="245" x2="770" y2="245" stroke="#1E293B" stroke-width="1"/>
-<text x="60" y="249" font-family="Inter, Roboto, Arial, sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">200</text>
+<text x="60" y="249" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">200</text>
 <line x1="70" y1="152.5" x2="770" y2="152.5" stroke="#1E293B" stroke-width="1"/>
-<text x="60" y="156.5" font-family="Inter, Roboto, Arial, sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">300</text>
+<text x="60" y="156.5" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">300</text>
 <line x1="70" y1="60" x2="770" y2="60" stroke="#1E293B" stroke-width="1"/>
-<text x="60" y="64" font-family="Inter, Roboto, Arial, sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">400</text>
-<text x="157.5" y="450" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Q1 2026</text>
-<text x="332.5" y="450" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Q2 2026</text>
-<text x="507.5" y="450" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Q3 2026</text>
-<text x="682.5" y="450" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Q4 2026</text>
+<text x="60" y="64" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="end" fill="#94A3B8">400</text>
+<text x="157.5" y="448" font-family="'DejaVu Sans', sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Q1 2026</text>
+<text x="332.5" y="448" font-family="'DejaVu Sans', sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Q2 2026</text>
+<text x="507.5" y="448" font-family="'DejaVu Sans', sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Q3 2026</text>
+<text x="682.5" y="448" font-family="'DejaVu Sans', sans-serif" font-size="12" text-anchor="middle" fill="#94A3B8">Q4 2026</text>
 <line x1="70" y1="430" x2="770" y2="430" stroke="#334155" stroke-width="1.5"/>
 <rect x="87.5" y="314.375" width="126" height="115.625" rx="3" ry="3" fill="#059669" fill-opacity="0.95"/>
 <rect x="262.5" y="254.25" width="126" height="175.75" rx="3" ry="3" fill="#059669" fill-opacity="0.95"/>
