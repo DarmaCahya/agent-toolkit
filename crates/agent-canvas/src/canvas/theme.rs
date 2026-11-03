@@ -140,6 +140,13 @@ impl Palette {
         }
     }
 
+    pub fn surface(&self) -> Color {
+        match self.mode {
+            ThemeMode::Light => Color::from_rgb(0xF1, 0xF5, 0xF9),
+            ThemeMode::Dark => Color::from_rgb(0x1E, 0x29, 0x3B),
+        }
+    }
+
     pub fn text_primary(&self) -> Color {
         match self.mode {
             ThemeMode::Light => Color::from_rgb(0x0F, 0x17, 0x2A),
