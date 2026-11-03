@@ -15,6 +15,7 @@
 pub mod canvas;
 pub mod chart;
 pub mod error;
+pub mod graph;
 pub mod math;
 
 pub use canvas::{
@@ -26,4 +27,5 @@ pub use chart::{
     LineChart, LineSeries, QuadrantItem, QuadrantMatrix, Sparkline, WaterfallChart, WaterfallItem,
 };
 pub use error::{CanvasError, Result};
+pub use graph::{Direction, Edge, EdgeStyle, Flowchart, Node, NodeShape};
 pub use math::{calculate_slice_angles, CategoryScale, LinearScale, TickGenerator};
