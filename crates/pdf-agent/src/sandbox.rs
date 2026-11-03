@@ -55,14 +55,24 @@ pub fn validate_relative_path(path_str: &str, allowed_exts: &[&str]) -> Result<P
                 )));
             }
             Component::Normal(name) => {
-                // Windows reserved names & ADS protection
-                let s = name.to_string_lossy().to_uppercase();
-                if ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "LPT1"].contains(&s.as_str()) {
+                // Windows reserved names & ADS protection (checks base stem so CON.md, NUL.txt are blocked)
+                let stem = Path::new(name)
+                    .file_stem()
+                    .unwrap_or(name)
+                    .to_string_lossy()
+                    .to_uppercase();
+                const RESERVED_DEVICE_NAMES: &[&str] = &[
+                    "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6",
+                    "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6",
+                    "LPT7", "LPT8", "LPT9",
+                ];
+                if RESERVED_DEVICE_NAMES.contains(&stem.as_str()) {
                     return Err(PdfError::InvalidArgument(format!(
                         "Reserved OS device name prohibited: {}",
                         trimmed
                     )));
                 }
+                let s = name.to_string_lossy();
                 if s.contains(':') {
                     return Err(PdfError::InvalidArgument(format!(
                         "Alternative Data Streams (ADS) colon syntax prohibited: {}",

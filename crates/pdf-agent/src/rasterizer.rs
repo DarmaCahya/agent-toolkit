@@ -97,4 +97,111 @@ impl PdfRasterizer {
         let image = Self::render_page(pdf_bytes, page_number, scale)?;
         image.to_png_bytes()
     }
+
+    /// Render a batch of pages (1-indexed, `page_start` to `page_start + page_limit`) in a single pass.
+    /// Returns a vector of `(1-indexed page_number, PageImage)`.
+    pub fn render_pages(
+        pdf_bytes: &[u8],
+        page_start: usize,
+        page_limit: usize,
+        scale: f32,
+    ) -> Result<Vec<(usize, PageImage)>> {
+        if pdf_bytes.len() > MAX_PDF_BYTES {
+            return Err(PdfError::LimitExceeded(format!(
+                "PDF size ({} bytes) exceeds maximum limit of {} bytes (256 MB)",
+                pdf_bytes.len(),
+                MAX_PDF_BYTES
+            )));
+        }
+
+        if !scale.is_finite() || scale < 0.1 || scale > 4.0 {
+            return Err(PdfError::InvalidArgument(format!(
+                "Render scale must be between 0.1 and 4.0, got: {}",
+                scale
+            )));
+        }
+
+        if page_limit == 0 {
+            return Ok(Vec::new());
+        }
+
+        crate::sandbox::guarded("rasterizer", || {
+            let pdf = Pdf::new(pdf_bytes.to_vec())
+                .map_err(|e| PdfError::Render(format!("Failed to parse PDF for rendering: {:?}", e)))?;
+
+            let total = pdf.pages().len();
+            if page_start == 0 || page_start > total {
+                return Err(PdfError::InvalidPage {
+                    page: page_start,
+                    total,
+                });
+            }
+
+            let start_idx = page_start - 1;
+            let end_idx = start_idx.saturating_add(page_limit).min(total);
+
+            // Pre-render dimension calculation across all batch pages to prevent OOM
+            const MAX_CUMULATIVE_PIXELS: usize = 100_000_000;
+            let mut total_pixels = 0usize;
+
+            for p_idx in start_idx..end_idx {
+                let page = &pdf.pages()[p_idx];
+                let (w_pt, h_pt) = page.render_dimensions();
+                if !w_pt.is_finite() || !h_pt.is_finite() || w_pt <= 0.0 || h_pt <= 0.0 {
+                    return Err(PdfError::Render(format!(
+                        "Invalid page dimensions on page {}: ({}pt x {}pt)",
+                        p_idx + 1,
+                        w_pt,
+                        h_pt
+                    )));
+                }
+
+                let est_w = (w_pt as f64 * scale as f64).ceil() as usize;
+                let est_h = (h_pt as f64 * scale as f64).ceil() as usize;
+                let est_pixels = est_w.saturating_mul(est_h);
+
+                total_pixels = total_pixels.saturating_add(est_pixels);
+                if total_pixels > MAX_CUMULATIVE_PIXELS {
+                    return Err(PdfError::LimitExceeded(format!(
+                        "Batch render total pixel dimensions ({total_pixels} px) exceed cumulative limit ({MAX_CUMULATIVE_PIXELS} px)"
+                    )));
+                }
+            }
+
+            let settings = InterpreterSettings::default();
+            let page_range = Some(start_idx..=end_idx - 1);
+
+            let pixmaps = hayro::render_pdf(&pdf, scale, settings, page_range)
+                .ok_or_else(|| PdfError::Render(format!("Failed to rasterize pages {page_start}..={end_idx}")))?;
+
+            let mut results = Vec::with_capacity(pixmaps.len());
+            for (offset, pixmap) in pixmaps.into_iter().enumerate() {
+                let current_page = page_start + offset;
+                let width = pixmap.width() as u32;
+                let height = pixmap.height() as u32;
+
+                let raw_slice: &[u8] = bytemuck::cast_slice(pixmap.data());
+                let img = PageImage::new(width, height, raw_slice.to_vec())?;
+                results.push((current_page, img));
+            }
+
+            Ok(results)
+        })
+    }
+
+    /// Render a batch of pages and encode each directly to PNG bytes.
+    pub fn render_pages_to_png(
+        pdf_bytes: &[u8],
+        page_start: usize,
+        page_limit: usize,
+        scale: f32,
+    ) -> Result<Vec<(usize, Vec<u8>)>> {
+        let pages = Self::render_pages(pdf_bytes, page_start, page_limit, scale)?;
+        let mut pngs = Vec::with_capacity(pages.len());
+        for (page_num, image) in pages {
+            let png_bytes = image.to_png_bytes()?;
+            pngs.push((page_num, png_bytes));
+        }
+        Ok(pngs)
+    }
 }
