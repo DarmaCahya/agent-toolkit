@@ -12,6 +12,11 @@
 //! - `math`: LaTeX math typesetting and Excel formula logic evaluator.
 //! - `component`: QR Code vector generator and KPI metric cards.
 
+pub mod canvas;
 pub mod error;
 
+pub use canvas::{
+    Color, Fill, FontMetrics, Palette, Path, PathCommand, Point, Rect, Size, Stroke, SvgCanvas,
+    ThemeMode,
+};
 pub use error::{CanvasError, Result};
