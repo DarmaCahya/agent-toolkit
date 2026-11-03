@@ -15,6 +15,10 @@ categories = ["graphics", "text-processing", "visualization"]
 name = "issue_006_demo"
 path = "examples/issue-006-demo/main.rs"
 
+[[example]]
+name = "issue_007_demo"
+path = "examples/issue-007-demo/main.rs"
+
 [dependencies]
 thiserror = "2"
 serde = { version = "1.0", features = ["derive"], optional = true }

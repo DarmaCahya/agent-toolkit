@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="480" viewBox="0 0 700 480">
+<rect x="0" y="0" width="700" height="480" fill="#0F172A"/>
+<text x="40" y="45" font-family="Inter, Roboto, Arial, sans-serif" font-size="18" text-anchor="start" fill="#F1F5F9">Pipeline Akuisisi Pengguna Baru (Funnel Konversi)</text>
+<path d="M80 80 L520 80 L355 165.5 L245 165.5 Z" fill="#2563EB"/>
+<text x="300" y="126.75" font-family="Inter, Roboto, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#FFFFFF">Total Pengunjung Unik (50000)</text>
+<path d="M245 171.5 L355 171.5 L318.48 257 L281.52 257 Z" fill="#059669"/>
+<text x="233" y="218.25" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="end" fill="#F1F5F9">Pendaftaran Akun Baru (12500)</text>
+<text x="535" y="181.5" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="start" fill="#94A3B8">25.0% conv</text>
+<path d="M281.52 263 L318.48 263 L315 348.5 L285 348.5 Z" fill="#D97706"/>
+<text x="269.52" y="309.75" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="end" fill="#F1F5F9">Aktivasi Layanan / Trial (4200)</text>
+<text x="535" y="273" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="start" fill="#94A3B8">33.6% conv</text>
+<path d="M285 354.5 L315 354.5 L315 440 L285 440 Z" fill="#E11D48"/>
+<text x="273" y="401.25" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="end" fill="#F1F5F9">Langganan Berbayar Pro (980)</text>
+<text x="535" y="364.5" font-family="Inter, Roboto, Arial, sans-serif" font-size="12" text-anchor="start" fill="#94A3B8">23.3% conv</text>
+</svg>
