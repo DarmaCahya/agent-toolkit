@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="849.62" height="940" viewBox="0 0 849.62 940">
+<defs>
+<marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#334155" /></marker>
+</defs>
+<rect x="0" y="0" width="849.62" height="940" fill="#0F172A"/>
+<text x="40" y="35" font-family="'DejaVu Sans', sans-serif" font-size="18" text-anchor="start" fill="#F1F5F9">Arsitektur Sistem Pembayaran Real-Time (Core Banking Flow)</text>
+<path d="M424.81 105 L424.81 165" fill="none" stroke="#334155" stroke-width="1.8" marker-end="url(#arrowhead)"/>
+<path d="M424.81 210 L424.81 270" fill="none" stroke="#334155" stroke-width="1.8" marker-end="url(#arrowhead)"/>
+<path d="M424.81 315 L424.81 375" fill="none" stroke="#334155" stroke-width="1.8" marker-end="url(#arrowhead)"/>
+<path d="M424.81 440 L424.81 470 L307.86 470 L307.86 500" fill="none" stroke="#334155" stroke-width="1.8" marker-end="url(#arrowhead)"/>
+<rect x="352.9" y="460" width="26.87" height="20" rx="4" ry="4" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+<text x="366.335" y="474" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="middle" fill="#F1F5F9">No</text>
+<path d="M424.81 440 L424.81 470 L538.89 470 L538.89 500" fill="none" stroke="#334155" stroke-width="1.8" marker-end="url(#arrowhead)"/>
+<rect x="465.555" y="460" width="32.59" height="20" rx="4" ry="4" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+<text x="481.85" y="474" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="middle" fill="#F1F5F9">Yes</text>
+<path d="M538.89 545 L538.89 575 L424.81 575 L424.81 605" fill="none" stroke="#334155" stroke-width="1.8" marker-end="url(#arrowhead)"/>
+<path d="M424.81 670 L424.81 700 L285.11 700 L285.11 730" fill="none" stroke="#334155" stroke-width="1.8" marker-end="url(#arrowhead)"/>
+<rect x="341.525" y="690" width="26.87" height="20" rx="4" ry="4" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+<text x="354.96" y="704" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="middle" fill="#F1F5F9">No</text>
+<path d="M424.81 670 L424.81 700 L527.48 700 L527.48 730" fill="none" stroke="#334155" stroke-width="1.8" marker-end="url(#arrowhead)"/>
+<rect x="459.85" y="690" width="32.59" height="20" rx="4" ry="4" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+<text x="476.145" y="704" font-family="'DejaVu Sans', sans-serif" font-size="11" text-anchor="middle" fill="#F1F5F9">Yes</text>
+<path d="M527.48 775 L527.48 805 L161.2 805 L161.2 835" fill="none" stroke="#334155" stroke-width="1.8" marker-end="url(#arrowhead)"/>
+<path d="M527.48 775 L527.48 805 L401.05 805 L401.05 835" fill="none" stroke="#334155" stroke-width="1.8" stroke-dasharray="4 4" marker-end="url(#arrowhead)"/>
+<path d="M527.48 775 L527.48 805 L664.66 805 L664.66 835" fill="none" stroke="#334155" stroke-width="1.8" marker-end="url(#arrowhead)"/>
+<rect x="310.42" y="60" width="228.78" height="45" rx="22.5" ry="22.5" fill="#2563EB" fill-opacity="0.2" stroke="#2563EB" stroke-width="2"/>
+<text x="424.81" y="87.05" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#F1F5F9">Consumer &amp; Merchant Apps</text>
+<rect x="331.8" y="165" width="186.02" height="45" rx="6" ry="6" fill="#059669" fill-opacity="0.15" stroke="#059669" stroke-width="1.8"/>
+<text x="424.81" y="192.05" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#F1F5F9">Global Cloudflare Edge</text>
+<rect x="333.55" y="270" width="182.52" height="45" rx="6" ry="6" fill="#D97706" fill-opacity="0.15" stroke="#D97706" stroke-width="1.8"/>
+<text x="424.81" y="297.05" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#F1F5F9">Central API Gateway</text>
+<path d="M424.81 375 L501.64 407.5 L424.81 440 L347.98 407.5 Z" fill="#E11D48" fill-opacity="0.15" stroke="#E11D48" stroke-width="1.8"/>
+<text x="424.81" y="412.05" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#F1F5F9">Rate Limit OK</text>
+<rect x="211.28" y="500" width="193.16" height="45" rx="6" ry="6" fill="#4F46E5" fill-opacity="0.15" stroke="#4F46E5" stroke-width="1.8"/>
+<text x="307.86" y="527.05" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#F1F5F9">429 Too Many Requests</text>
+<rect x="439.44" y="500" width="198.9" height="45" rx="6" ry="6" fill="#0D9488" fill-opacity="0.15" stroke="#0D9488" stroke-width="1.8"/>
+<text x="538.89" y="527.05" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#F1F5F9">OAuth2 Token Validation</text>
+<path d="M424.81 605 L494.81 637.5 L424.81 670 L354.81 637.5 Z" fill="#475569" fill-opacity="0.15" stroke="#475569" stroke-width="1.8"/>
+<text x="424.81" y="642.05" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#F1F5F9">Saldo Cukup</text>
+<rect x="199.94" y="730" width="170.34" height="45" rx="6" ry="6" fill="#7C3AED" fill-opacity="0.15" stroke="#7C3AED" stroke-width="1.8"/>
+<text x="285.11" y="757.05" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#F1F5F9">Tolak Transaksi 402</text>
+<rect x="405.28" y="730" width="244.4" height="45" rx="6" ry="6" fill="#2563EB" fill-opacity="0.15" stroke="#2563EB" stroke-width="1.8"/>
+<text x="527.48" y="757.05" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#F1F5F9">Core Immutable Ledger Engine</text>
+<rect x="60" y="835" width="202.4" height="45" rx="6" ry="6" fill="#059669" fill-opacity="0.15" stroke="#059669" stroke-width="1.8"/>
+<text x="161.2" y="862.05" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#F1F5F9">(PostgreSQL Audit Log)</text>
+<rect x="297.4" y="835" width="207.3" height="45" rx="6" ry="6" fill="#D97706" fill-opacity="0.15" stroke="#D97706" stroke-width="1.8"/>
+<text x="401.05" y="862.05" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#F1F5F9">(Kafka Event Bus &amp; CDC)</text>
+<rect x="539.7" y="835" width="249.92" height="45" rx="22.5" ry="22.5" fill="#E11D48" fill-opacity="0.2" stroke="#E11D48" stroke-width="2"/>
+<text x="664.66" y="862.05" font-family="'DejaVu Sans', sans-serif" font-size="13" text-anchor="middle" fill="#F1F5F9">Kirim Struk &amp; Webhook Sukses</text>
+</svg>

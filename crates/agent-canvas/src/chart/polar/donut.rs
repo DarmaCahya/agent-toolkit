@@ -44,8 +44,8 @@ impl DonutChart {
             center_text_primary: None,
             center_text_secondary: None,
             slices: Vec::new(),
-            width: 650.0,
-            height: 400.0,
+            width: 820.0,
+            height: 480.0,
             hole_ratio: 0.58,
             theme: ThemeMode::Light,
         }
@@ -78,6 +78,12 @@ impl DonutChart {
         self
     }
 
+    pub fn with_size(mut self, width: f32, height: f32) -> Self {
+        self.width = width;
+        self.height = height;
+        self
+    }
+
     pub fn to_svg(&self) -> Result<String> {
         let palette = Palette::new(self.theme);
         let mut canvas = SvgCanvas::new(self.width, self.height)
@@ -96,7 +102,7 @@ impl DonutChart {
         }
 
         // Layout: Ring center on left, Legend on right
-        let center_x = self.width * 0.35;
+        let center_x = self.width * 0.28;
         let center_y = self.height * 0.55;
         let outer_r = (self.height * 0.35).min(center_x - 30.0);
         let inner_r = outer_r * self.hole_ratio;
@@ -197,13 +203,13 @@ impl DonutChart {
                 );
             }
 
-            // Draw Legend Entry on the right
-            let legend_x = self.width * 0.65;
-            let legend_y = center_y - (angles.len() as f32 * 15.0) + (i as f32 * 32.0);
+            // Draw Legend Entry on the right (with ample width for long Indonesian corporate text)
+            let legend_x = self.width * 0.52;
+            let legend_y = center_y - (angles.len() as f32 * 14.0) + (i as f32 * 28.0);
 
             // Color box
             canvas.draw_rect(
-                Rect::new(Point::new(legend_x, legend_y), Size::new(14.0, 14.0)).with_radius(3.0, 3.0),
+                Rect::new(Point::new(legend_x, legend_y), Size::new(12.0, 12.0)).with_radius(2.0, 2.0),
                 None,
                 Some(Fill::solid(color)),
             );
@@ -211,9 +217,9 @@ impl DonutChart {
             // Label & Percentage
             let pct_text = format!("{} ({:.1}%)", slice.label, pct * 100.0);
             canvas.draw_text(
-                Point::new(legend_x + 24.0, legend_y + 11.0),
+                Point::new(legend_x + 20.0, legend_y + 10.0),
                 &pct_text,
-                13.0,
+                11.5,
                 palette.text_primary(),
                 "start",
             );
