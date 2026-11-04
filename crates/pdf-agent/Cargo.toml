@@ -20,9 +20,9 @@ writer = ["dep:fulgur"]
 [dependencies]
 bytemuck = { version = "1.25.2", optional = true }
 hayro = { version = "0.8.0", optional = true }
-image = { version = "=0.25.6", default-features = false, features = ["png"], optional = true }
+image = { version = "0.25", default-features = false, features = ["png"], optional = true }
 pdf_oxide = { version = "0.3.78", optional = true }
-fulgur = { version = "0.40.0", optional = true }
+fulgur = { version = "0.41", optional = true }
 thiserror = "2"
 serde = { version = "1.0", features = ["derive"] }
 
