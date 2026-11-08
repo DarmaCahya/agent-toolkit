@@ -43,8 +43,7 @@ fn test_all_7_charts_render_valid_svg() {
         .title("Monthly Active Users")
         .categories(&["Jan", "Feb", "Mar", "Apr"])
         .add_series(
-            LineSeries::new("MAU", &[12000.0, 18500.0, 24000.0, 31000.0])
-                .with_area_fill(true),
+            LineSeries::new("MAU", &[12000.0, 18500.0, 24000.0, 31000.0]).with_area_fill(true),
         )
         .to_svg()
         .expect("render line");
@@ -111,10 +110,24 @@ fn test_cartesian_plot_composability_bar_plus_line() {
         .expect("render frame");
 
     let bar = BarSeries::new("Revenue", &[40.0, 70.0, 95.0]);
-    bar.render_on(&mut canvas, &plot_rect, &cat_scale, &y_scale, 0, 1, Color::from_hex("#2563EB").unwrap());
+    bar.render_on(
+        &mut canvas,
+        &plot_rect,
+        &cat_scale,
+        &y_scale,
+        0,
+        1,
+        Color::from_hex("#2563EB").unwrap(),
+    );
 
     let line = LineSeries::new("Target", &[50.0, 65.0, 80.0]);
-    line.render_on(&mut canvas, &plot_rect, &cat_scale, &y_scale, Color::from_hex("#10B981").unwrap());
+    line.render_on(
+        &mut canvas,
+        &plot_rect,
+        &cat_scale,
+        &y_scale,
+        Color::from_hex("#10B981").unwrap(),
+    );
 
     let svg = canvas.to_svg();
     assert!(svg.contains("Combined Bar + Line Plan"));

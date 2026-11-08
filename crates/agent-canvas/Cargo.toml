@@ -24,12 +24,19 @@ name = "issue_008_demo"
 path = "examples/issue-008-demo/main.rs"
 
 [[example]]
+name = "issue_009_demo"
+path = "examples/issue-009-demo/main.rs"
+
+[[example]]
 name = "enterprise_suite"
 path = "../../examples/enterprise-suite/main.rs"
 
 [dependencies]
 thiserror = "2"
 serde = { version = "1.0", features = ["derive"], optional = true }
+
+[dev-dependencies]
+proptest = { version = "1", default-features = false, features = ["std"] }
 
 [features]
 default = ["serde"]

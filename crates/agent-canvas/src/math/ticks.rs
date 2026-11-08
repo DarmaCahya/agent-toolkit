@@ -98,7 +98,11 @@ impl TickGenerator {
         let mut ticks: Vec<f32> = (first..=last)
             .map(|k| {
                 let v = k as f64 * step;
-                let v = if scale.is_finite() { (v * scale).round() / scale } else { v };
+                let v = if scale.is_finite() {
+                    (v * scale).round() / scale
+                } else {
+                    v
+                };
                 v as f32
             })
             .filter(|v| v.is_finite())
@@ -126,7 +130,10 @@ impl TickGenerator {
         if abs >= 1e3 {
             // Pick the largest unit that fits, then promote if rounding
             // pushes the scaled value to 1000 (e.g. 999_999 -> "1M").
-            let mut idx = UNITS.iter().position(|(u, _)| abs >= *u).unwrap_or(UNITS.len() - 1);
+            let mut idx = UNITS
+                .iter()
+                .position(|(u, _)| abs >= *u)
+                .unwrap_or(UNITS.len() - 1);
             let rounded = |i: usize| (v / UNITS[i].0 * 100.0).round().abs() / 100.0;
             while idx > 0 && rounded(idx) >= 1000.0 {
                 idx -= 1;
@@ -190,7 +197,16 @@ mod tests {
     fn large_rupiah_values() {
         let t = TickGenerator::generate_ticks(0.0, 350_000_000.0, 5);
         assert_clean(&t);
-        assert_eq!(t, vec![0.0, 100_000_000.0, 200_000_000.0, 300_000_000.0, 400_000_000.0]);
+        assert_eq!(
+            t,
+            vec![
+                0.0,
+                100_000_000.0,
+                200_000_000.0,
+                300_000_000.0,
+                400_000_000.0
+            ]
+        );
         let t = TickGenerator::generate_ticks(120_000_000.0, 480_000_000.0, 6);
         assert_clean(&t);
     }
@@ -199,7 +215,10 @@ mod tests {
     fn constant_and_degenerate() {
         assert_eq!(TickGenerator::generate_ticks(5.0, 5.0, 5), vec![5.0]);
         assert_eq!(TickGenerator::generate_ticks(0.0, 0.0, 5), vec![0.0]);
-        assert_eq!(TickGenerator::generate_ticks(f32::NAN, f32::NAN, 5), vec![0.0]);
+        assert_eq!(
+            TickGenerator::generate_ticks(f32::NAN, f32::NAN, 5),
+            vec![0.0]
+        );
         assert_clean(&TickGenerator::generate_ticks(10.0, 0.0, 0));
         assert_clean(&TickGenerator::generate_ticks(0.0, 10.0, 1));
         assert_clean(&TickGenerator::generate_ticks(f32::MIN, f32::MAX, 5));
@@ -209,7 +228,13 @@ mod tests {
 
     #[test]
     fn steps_are_nice() {
-        for (lo, hi) in [(0.0, 7.0), (0.0, 13.0), (-3.0, 11.0), (0.0, 0.07), (0.0, 9e8)] {
+        for (lo, hi) in [
+            (0.0, 7.0),
+            (0.0, 13.0),
+            (-3.0, 11.0),
+            (0.0, 0.07),
+            (0.0, 9e8),
+        ] {
             let t = TickGenerator::generate_ticks(lo, hi, 6);
             let step = (t[1] - t[0]) as f64;
             let mantissa = step / 10f64.powf(step.log10().floor());

@@ -141,7 +141,15 @@ impl BarChart {
         let total_series = self.series.len();
         for (i, s) in self.series.iter().enumerate() {
             let color = palette.get_categorical(i);
-            s.render_on(&mut canvas, &plot_rect, &cat_scale, &y_scale, i, total_series, color);
+            s.render_on(
+                &mut canvas,
+                &plot_rect,
+                &cat_scale,
+                &y_scale,
+                i,
+                total_series,
+                color,
+            );
         }
 
         Ok(canvas.to_svg())

@@ -12,8 +12,16 @@ pub struct QuadrantItem {
 
 impl QuadrantItem {
     pub fn new(label: impl Into<String>, x: f32, y: f32) -> Self {
-        let safe_x = if x.is_finite() { x.clamp(0.0, 100.0) } else { 0.0 };
-        let safe_y = if y.is_finite() { y.clamp(0.0, 100.0) } else { 0.0 };
+        let safe_x = if x.is_finite() {
+            x.clamp(0.0, 100.0)
+        } else {
+            0.0
+        };
+        let safe_y = if y.is_finite() {
+            y.clamp(0.0, 100.0)
+        } else {
+            0.0
+        };
         Self {
             label: label.into(),
             x: safe_x,
@@ -48,10 +56,10 @@ impl QuadrantMatrix {
             x_axis_label: "Effort / Complexity".to_string(),
             y_axis_label: "Impact / Value".to_string(),
             quadrant_labels: (
-                "Strategic Bets".to_string(), // High Effort, High Impact
-                "Quick Wins".to_string(),     // Low Effort, High Impact
-                "Fill-ins".to_string(),       // Low Effort, Low Impact
-                "Thankless Tasks".to_string(),// High Effort, Low Impact
+                "Strategic Bets".to_string(),  // High Effort, High Impact
+                "Quick Wins".to_string(),      // Low Effort, High Impact
+                "Fill-ins".to_string(),        // Low Effort, Low Impact
+                "Thankless Tasks".to_string(), // High Effort, Low Impact
             ),
             items: Vec::new(),
             width: 700.0,
@@ -76,7 +84,12 @@ impl QuadrantMatrix {
     }
 
     pub fn quadrant_labels(mut self, tr: &str, tl: &str, bl: &str, br: &str) -> Self {
-        self.quadrant_labels = (tr.to_string(), tl.to_string(), bl.to_string(), br.to_string());
+        self.quadrant_labels = (
+            tr.to_string(),
+            tl.to_string(),
+            bl.to_string(),
+            br.to_string(),
+        );
         self
     }
 
@@ -121,9 +134,18 @@ impl QuadrantMatrix {
 
         // Draw 4 Quadrants Background
         let q_tl = Rect::new(Point::new(margin_l, margin_t), Size::new(half_w, half_h));
-        let q_tr = Rect::new(Point::new(margin_l + half_w, margin_t), Size::new(half_w, half_h));
-        let q_bl = Rect::new(Point::new(margin_l, margin_t + half_h), Size::new(half_w, half_h));
-        let q_br = Rect::new(Point::new(margin_l + half_w, margin_t + half_h), Size::new(half_w, half_h));
+        let q_tr = Rect::new(
+            Point::new(margin_l + half_w, margin_t),
+            Size::new(half_w, half_h),
+        );
+        let q_bl = Rect::new(
+            Point::new(margin_l, margin_t + half_h),
+            Size::new(half_w, half_h),
+        );
+        let q_br = Rect::new(
+            Point::new(margin_l + half_w, margin_t + half_h),
+            Size::new(half_w, half_h),
+        );
 
         // Subtle quadrant tints
         let tint_green = Color::from_hex("#10B981").unwrap();
@@ -160,10 +182,34 @@ impl QuadrantMatrix {
 
         // Quadrant Title Badges in corners
         let font_q = 12.0;
-        canvas.draw_text(Point::new(margin_l + 12.0, margin_t + 20.0), &self.quadrant_labels.1, font_q, palette.text_secondary(), "start"); // TL
-        canvas.draw_text(Point::new(margin_l + grid_w - 12.0, margin_t + 20.0), &self.quadrant_labels.0, font_q, palette.text_secondary(), "end"); // TR
-        canvas.draw_text(Point::new(margin_l + 12.0, margin_t + grid_h - 12.0), &self.quadrant_labels.2, font_q, palette.text_secondary(), "start"); // BL
-        canvas.draw_text(Point::new(margin_l + grid_w - 12.0, margin_t + grid_h - 12.0), &self.quadrant_labels.3, font_q, palette.text_secondary(), "end"); // BR
+        canvas.draw_text(
+            Point::new(margin_l + 12.0, margin_t + 20.0),
+            &self.quadrant_labels.1,
+            font_q,
+            palette.text_secondary(),
+            "start",
+        ); // TL
+        canvas.draw_text(
+            Point::new(margin_l + grid_w - 12.0, margin_t + 20.0),
+            &self.quadrant_labels.0,
+            font_q,
+            palette.text_secondary(),
+            "end",
+        ); // TR
+        canvas.draw_text(
+            Point::new(margin_l + 12.0, margin_t + grid_h - 12.0),
+            &self.quadrant_labels.2,
+            font_q,
+            palette.text_secondary(),
+            "start",
+        ); // BL
+        canvas.draw_text(
+            Point::new(margin_l + grid_w - 12.0, margin_t + grid_h - 12.0),
+            &self.quadrant_labels.3,
+            font_q,
+            palette.text_secondary(),
+            "end",
+        ); // BR
 
         // Axis Titles: Y-axis title rotated -90 degrees vertically
         canvas.draw_text(

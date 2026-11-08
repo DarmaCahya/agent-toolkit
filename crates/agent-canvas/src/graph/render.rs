@@ -94,7 +94,9 @@ impl Flowchart {
 
         // 3. Draw Edges with Manhattan Orthogonal Routing
         for edge in &self.edges {
-            if let (Some(from_node), Some(to_node)) = (node_map.get(&edge.from_id), node_map.get(&edge.to_id)) {
+            if let (Some(from_node), Some(to_node)) =
+                (node_map.get(&edge.from_id), node_map.get(&edge.to_id))
+            {
                 let (path, label_pos) = route_orthogonal_edge(from_node, to_node, self.direction);
 
                 let dash_array = match edge.style {
@@ -131,7 +133,8 @@ impl Flowchart {
                     let badge_rect = Rect::new(
                         Point::new(label_pos.x - badge_w / 2.0, label_pos.y - badge_h / 2.0),
                         Size::new(badge_w, badge_h),
-                    ).with_radius(4.0, 4.0);
+                    )
+                    .with_radius(4.0, 4.0);
 
                     // Badge background to mask edge line
                     canvas.draw_rect(

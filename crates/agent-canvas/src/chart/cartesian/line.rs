@@ -70,7 +70,10 @@ impl LineSeries {
 
         // Draw area fill if requested
         if self.area_fill && points.len() >= 2 {
-            let zero_y = y_scale.map(0.0).clamp(plot_area.origin.y, plot_area.origin.y + plot_area.size.height);
+            let zero_y = y_scale.map(0.0).clamp(
+                plot_area.origin.y,
+                plot_area.origin.y + plot_area.size.height,
+            );
             let mut area_path = Path::new();
             area_path = area_path.move_to(Point::new(points[0].x, zero_y));
             for p in &points {

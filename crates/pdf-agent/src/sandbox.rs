@@ -23,8 +23,12 @@ where
         };
         match engine {
             "reader" => PdfError::Read(format!("Internal reader panic caught safely: {}", msg)),
-            "rasterizer" => PdfError::Render(format!("Internal rasterizer panic caught safely: {}", msg)),
-            "generator" => PdfError::Generate(format!("Internal generator panic caught safely: {}", msg)),
+            "rasterizer" => {
+                PdfError::Render(format!("Internal rasterizer panic caught safely: {}", msg))
+            }
+            "generator" => {
+                PdfError::Generate(format!("Internal generator panic caught safely: {}", msg))
+            }
             _ => PdfError::Read(format!("Internal engine panic caught safely: {}", msg)),
         }
     })?
@@ -36,7 +40,9 @@ where
 pub fn validate_relative_path(path_str: &str, allowed_exts: &[&str]) -> Result<PathBuf> {
     let trimmed = path_str.trim();
     if trimmed.is_empty() {
-        return Err(PdfError::InvalidArgument("Target path cannot be empty".into()));
+        return Err(PdfError::InvalidArgument(
+            "Target path cannot be empty".into(),
+        ));
     }
 
     let p = Path::new(trimmed);
@@ -63,8 +69,8 @@ pub fn validate_relative_path(path_str: &str, allowed_exts: &[&str]) -> Result<P
                     .to_uppercase();
                 const RESERVED_DEVICE_NAMES: &[&str] = &[
                     "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6",
-                    "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6",
-                    "LPT7", "LPT8", "LPT9",
+                    "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7",
+                    "LPT8", "LPT9",
                 ];
                 if RESERVED_DEVICE_NAMES.contains(&stem.as_str()) {
                     return Err(PdfError::InvalidArgument(format!(
@@ -126,12 +132,7 @@ pub fn atomic_write_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
         .unwrap_or_default()
         .as_nanos();
     let counter = TMP_COUNTER.fetch_add(1, Ordering::Relaxed);
-    let tmp_filename = format!(
-        ".tmp_{}_{}_{}.tmp",
-        std::process::id(),
-        nanos,
-        counter
-    );
+    let tmp_filename = format!(".tmp_{}_{}_{}.tmp", std::process::id(), nanos, counter);
     let tmp_path = match path.parent() {
         Some(dir) if !dir.as_os_str().is_empty() => dir.join(tmp_filename),
         _ => PathBuf::from(tmp_filename),

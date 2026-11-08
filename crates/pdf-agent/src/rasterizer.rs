@@ -33,8 +33,9 @@ impl PdfRasterizer {
 
         // Catch potential panics from unhandled upstream parser edge cases (T1 & S15)
         crate::sandbox::guarded("rasterizer", || {
-            let pdf = Pdf::new(pdf_bytes.to_vec())
-                .map_err(|e| PdfError::Render(format!("Failed to parse PDF for rendering: {:?}", e)))?;
+            let pdf = Pdf::new(pdf_bytes.to_vec()).map_err(|e| {
+                PdfError::Render(format!("Failed to parse PDF for rendering: {:?}", e))
+            })?;
 
             let total = pdf.pages().len();
             if page_number == 0 || page_number > total {
@@ -69,8 +70,10 @@ impl PdfRasterizer {
             let settings = InterpreterSettings::default();
             let page_range = Some(page_index..=page_index);
 
-            let pixmaps = hayro::render_pdf(&pdf, scale, settings, page_range)
-                .ok_or_else(|| PdfError::Render(format!("Failed to rasterize page {}", page_number)))?;
+            let pixmaps =
+                hayro::render_pdf(&pdf, scale, settings, page_range).ok_or_else(|| {
+                    PdfError::Render(format!("Failed to rasterize page {}", page_number))
+                })?;
 
             let pixmap = pixmaps.first().ok_or_else(|| {
                 PdfError::Render(format!("No pixmap returned for page {}", page_number))
@@ -126,8 +129,9 @@ impl PdfRasterizer {
         }
 
         crate::sandbox::guarded("rasterizer", || {
-            let pdf = Pdf::new(pdf_bytes.to_vec())
-                .map_err(|e| PdfError::Render(format!("Failed to parse PDF for rendering: {:?}", e)))?;
+            let pdf = Pdf::new(pdf_bytes.to_vec()).map_err(|e| {
+                PdfError::Render(format!("Failed to parse PDF for rendering: {:?}", e))
+            })?;
 
             let total = pdf.pages().len();
             if page_start == 0 || page_start > total {
@@ -171,8 +175,12 @@ impl PdfRasterizer {
             let settings = InterpreterSettings::default();
             let page_range = Some(start_idx..=end_idx - 1);
 
-            let pixmaps = hayro::render_pdf(&pdf, scale, settings, page_range)
-                .ok_or_else(|| PdfError::Render(format!("Failed to rasterize pages {page_start}..={end_idx}")))?;
+            let pixmaps =
+                hayro::render_pdf(&pdf, scale, settings, page_range).ok_or_else(|| {
+                    PdfError::Render(format!(
+                        "Failed to rasterize pages {page_start}..={end_idx}"
+                    ))
+                })?;
 
             let mut results = Vec::with_capacity(pixmaps.len());
             for (offset, pixmap) in pixmaps.into_iter().enumerate() {

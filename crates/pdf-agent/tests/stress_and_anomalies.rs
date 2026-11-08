@@ -1,8 +1,8 @@
+use pdf_agent::{PdfError, PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader};
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use std::thread;
-use pdf_agent::{PdfError, PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader};
 
 fn get_corpus_file(name: &str) -> Vec<u8> {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
@@ -35,10 +35,16 @@ fn test_anomaly_unencrypted_doc_with_superfluous_password() {
 
     // Passing a password to an unencrypted document should succeed gracefully, never panic.
     let count = PdfReader::page_count_with_password(&bytes, Some("dummy_pass"));
-    assert!(count.is_ok(), "Unencrypted doc should gracefully handle superfluous password");
+    assert!(
+        count.is_ok(),
+        "Unencrypted doc should gracefully handle superfluous password"
+    );
 
     let headings = PdfReader::extract_headings_with_password(&bytes, Some("dummy_pass"));
-    assert!(headings.is_ok(), "Heading extraction should succeed on unencrypted doc even if password passed");
+    assert!(
+        headings.is_ok(),
+        "Heading extraction should succeed on unencrypted doc even if password passed"
+    );
 
     let search = PdfReader::search_keyword_with_password(&bytes, "table", Some("dummy_pass"));
     assert!(search.is_ok());
@@ -62,7 +68,8 @@ fn test_anomaly_zero_page_limit_in_read_and_batch() {
     }
 
     // In render_pages(): page_limit = 0 returns empty batch gracefully without error
-    let batch = PdfRasterizer::render_pages(&bytes, 1, 0, 1.0).expect("render_pages limit 0 should succeed");
+    let batch = PdfRasterizer::render_pages(&bytes, 1, 0, 1.0)
+        .expect("render_pages limit 0 should succeed");
     assert!(batch.is_empty());
 }
 
@@ -78,7 +85,8 @@ fn test_anomaly_extreme_budget_clamp() {
 
     // max_chars = 500_000: Max in-memory safe budget should succeed
     let opts_safe_ceiling = PdfReadOptions::new().with_max_chars(500_000);
-    let res_safe = PdfReader::read(&bytes, Some(opts_safe_ceiling)).expect("Safe ceiling max_chars");
+    let res_safe =
+        PdfReader::read(&bytes, Some(opts_safe_ceiling)).expect("Safe ceiling max_chars");
     assert!(!res_safe.markdown.is_empty());
 
     // max_chars = 50_000_000: Exceeds in-memory safe budget (guard protects LLM context)
@@ -117,7 +125,10 @@ fn test_anomaly_unicode_rtl_cjk_emoji_roundtrip() {
 
     let read_res = PdfReader::read(&pdf_bytes, None).expect("Read generated PDF");
     let md = read_res.markdown;
-    assert!(md.contains("Laporan Keuangan") || md.contains("Analisis AI"), "Title must be present");
+    assert!(
+        md.contains("Laporan Keuangan") || md.contains("Analisis AI"),
+        "Title must be present"
+    );
     assert!(!read_res.scanned_likely);
 }
 
@@ -173,7 +184,10 @@ fn test_security_adversarial_offline_html_isolation() {
     let md = PdfReader::extract_markdown(&pdf_bytes).expect("Read markdown");
     assert!(md.contains("Executive Brief"));
     assert!(md.contains("secure"));
-    assert!(!md.contains("XSS payload executed"), "Script tag contents must not leak into document text");
+    assert!(
+        !md.contains("XSS payload executed"),
+        "Script tag contents must not leak into document text"
+    );
 }
 
 // =========================================================================
@@ -267,7 +281,11 @@ fn test_stress_concurrent_reading_and_searching() {
             assert_eq!(res.total_pages, 434);
 
             // Task B: Keyword search
-            let query = if thread_id % 2 == 0 { "Page" } else { "Document" };
+            let query = if thread_id % 2 == 0 {
+                "Page"
+            } else {
+                "Document"
+            };
             let matches = PdfReader::search_keyword(&doc, query).expect("Concurrent search");
             assert!(!matches.is_empty());
 
@@ -277,14 +295,17 @@ fn test_stress_concurrent_reading_and_searching() {
             assert!(count >= 1);
 
             // Task D: Search on locked document
-            let lock_search = PdfReader::search_keyword_with_password(&locked, "vizier", Some("vizier"))
-                .expect("Concurrent search on locked doc");
+            let lock_search =
+                PdfReader::search_keyword_with_password(&locked, "vizier", Some("vizier"))
+                    .expect("Concurrent search on locked doc");
             let _ = lock_search;
         }));
     }
 
     for handle in handles {
-        handle.join().expect("Worker thread panicked under concurrency");
+        handle
+            .join()
+            .expect("Worker thread panicked under concurrency");
     }
 }
 
@@ -301,8 +322,8 @@ fn test_stress_concurrent_batch_rasterization() {
         let doc = Arc::clone(&doc_bytes);
         handles.push(thread::spawn(move || {
             let scale = 0.5 + (i as f32 * 0.2); // 0.5, 0.7, 0.9, 1.1, 1.3, 1.5
-            let batch = PdfRasterizer::render_pages(&doc, 1, 1, scale)
-                .expect("Concurrent render_pages");
+            let batch =
+                PdfRasterizer::render_pages(&doc, 1, 1, scale).expect("Concurrent render_pages");
             assert_eq!(batch.len(), 1);
             assert!(batch[0].1.width() > 0);
             assert!(batch[0].1.height() > 0);

@@ -1,8 +1,8 @@
 #![forbid(unsafe_code)]
 
 pub mod error;
-pub mod types;
 pub(crate) mod sandbox;
+pub mod types;
 
 #[cfg(feature = "writer")]
 pub mod generator;

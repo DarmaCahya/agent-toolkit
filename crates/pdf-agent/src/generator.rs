@@ -33,7 +33,8 @@ impl PdfGenerator {
     /// Render HTML/CSS to a destination PDF file path with sandbox path verification and atomic write (K2, C3, S8).
     pub fn from_html_to_file<P: AsRef<Path>>(html: &str, path: P) -> Result<()> {
         let p = path.as_ref();
-        let safe_path = crate::sandbox::validate_relative_path(p.to_string_lossy().as_ref(), &["pdf"])?;
+        let safe_path =
+            crate::sandbox::validate_relative_path(p.to_string_lossy().as_ref(), &["pdf"])?;
 
         let pdf_bytes = Self::from_html(html)?;
         crate::sandbox::atomic_write_bytes(&safe_path, &pdf_bytes)?;
@@ -61,7 +62,10 @@ fn find_opening_tag(html: &str, tag_name: &str) -> Option<(usize, usize)> {
         }
 
         // Skip doctypes, closing tags, and processing instructions
-        if bytes[i..].starts_with(b"<!") || bytes[i..].starts_with(b"</") || bytes[i..].starts_with(b"<?") {
+        if bytes[i..].starts_with(b"<!")
+            || bytes[i..].starts_with(b"</")
+            || bytes[i..].starts_with(b"<?")
+        {
             if let Some(pos) = bytes[i..].iter().position(|&b| b == b'>') {
                 i += pos + 1;
             } else {
@@ -166,9 +170,16 @@ pub(crate) fn process_html(html: &str) -> String {
         let prefix = if has_doctype {
             format!("{}<html><head>{}</head>", before, FALLBACK_STYLE)
         } else {
-            format!("<!DOCTYPE html>{}<html><head>{}</head>", before, FALLBACK_STYLE)
+            format!(
+                "<!DOCTYPE html>{}<html><head>{}</head>",
+                before, FALLBACK_STYLE
+            )
         };
-        let suffix = if has_closing_tag(html, "html") { "" } else { "</html>" };
+        let suffix = if has_closing_tag(html, "html") {
+            ""
+        } else {
+            "</html>"
+        };
         return format!("{}{}{}", prefix, after, suffix);
     }
 
@@ -208,7 +219,8 @@ mod tests {
         assert_eq!(html_count, 1, "Should not duplicate <html> tag");
         assert_eq!(body_count, 1, "Should not duplicate <body> tag");
 
-        let pdf = PdfGenerator::from_html(html).expect("Generation should succeed with uppercase tags");
+        let pdf =
+            PdfGenerator::from_html(html).expect("Generation should succeed with uppercase tags");
         assert!(pdf.starts_with(b"%PDF-"), "Must produce valid PDF");
     }
 
@@ -240,7 +252,8 @@ mod tests {
             "No duplicate <body>"
         );
 
-        let pdf1 = PdfGenerator::from_html(html_with_head_attrs).expect("Should succeed with attributes");
+        let pdf1 =
+            PdfGenerator::from_html(html_with_head_attrs).expect("Should succeed with attributes");
         assert!(pdf1.starts_with(b"%PDF-"));
 
         let html_no_head = r#"
@@ -254,17 +267,24 @@ mod tests {
         let processed_no_head = process_html(html_no_head);
         assert!(processed_no_head.contains(":where(html, body)"));
         assert_eq!(
-            processed_no_head.to_ascii_lowercase().matches("<html").count(),
+            processed_no_head
+                .to_ascii_lowercase()
+                .matches("<html")
+                .count(),
             1,
             "No duplicate <html>"
         );
         assert_eq!(
-            processed_no_head.to_ascii_lowercase().matches("<body").count(),
+            processed_no_head
+                .to_ascii_lowercase()
+                .matches("<body")
+                .count(),
             1,
             "No duplicate <body>"
         );
 
-        let pdf2 = PdfGenerator::from_html(html_no_head).expect("Should succeed without head and with attributes");
+        let pdf2 = PdfGenerator::from_html(html_no_head)
+            .expect("Should succeed without head and with attributes");
         assert!(pdf2.starts_with(b"%PDF-"));
     }
 
@@ -284,17 +304,20 @@ mod tests {
         assert!(processed_fragment.contains("<body>"));
         assert!(processed_fragment.ends_with("</body></html>"));
 
-        let pdf1 = PdfGenerator::from_html(raw_fragment).expect("Should generate PDF from raw fragment");
+        let pdf1 =
+            PdfGenerator::from_html(raw_fragment).expect("Should generate PDF from raw fragment");
         assert!(pdf1.starts_with(b"%PDF-"));
 
         // Fragment that contains <body> but no <html> or <head>
-        let raw_body = r#"<body class="standalone-body"><h1>Body Fragment</h1><p>Has body tag</p></body>"#;
+        let raw_body =
+            r#"<body class="standalone-body"><h1>Body Fragment</h1><p>Has body tag</p></body>"#;
         let processed_body = process_html(raw_body);
         assert!(processed_body.contains(":where(html, body)"));
         let body_count = processed_body.to_ascii_lowercase().matches("<body").count();
         assert_eq!(body_count, 1, "Must avoid duplicate <body> wrapping");
 
-        let pdf2 = PdfGenerator::from_html(raw_body).expect("Should generate PDF from body fragment");
+        let pdf2 =
+            PdfGenerator::from_html(raw_body).expect("Should generate PDF from body fragment");
         assert!(pdf2.starts_with(b"%PDF-"));
     }
 

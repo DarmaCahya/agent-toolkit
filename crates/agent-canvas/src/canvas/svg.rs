@@ -22,7 +22,10 @@ pub fn escape_xml(input: &str) -> String {
             '"' => out.push_str("&quot;"),
             '\'' => out.push_str("&#39;"),
             '\t' | '\n' | '\r' => out.push(c),
-            c if c < ' ' || ('\u{7F}'..='\u{84}').contains(&c) || ('\u{86}'..='\u{9F}').contains(&c) => {
+            c if c < ' '
+                || ('\u{7F}'..='\u{84}').contains(&c)
+                || ('\u{86}'..='\u{9F}').contains(&c) =>
+            {
                 // Drop XML-illegal control characters
             }
             '\u{FFFE}' | '\u{FFFF}' => {
@@ -43,7 +46,9 @@ pub fn escape_xml(input: &str) -> String {
 }
 
 fn stroke_attrs(stroke: Option<&Stroke>) -> String {
-    let Some(s) = stroke else { return String::new() };
+    let Some(s) = stroke else {
+        return String::new();
+    };
     let mut out = format!(
         " stroke=\"{}\" stroke-width=\"{}\"",
         s.color.to_rgb_hex(),
@@ -82,7 +87,11 @@ pub struct SvgCanvas {
 
 impl SvgCanvas {
     pub fn new(width: f32, height: f32) -> Self {
-        Self { width, height, ..Self::default() }
+        Self {
+            width,
+            height,
+            ..Self::default()
+        }
     }
 
     pub fn with_view_box(mut self, min_x: f32, min_y: f32, width: f32, height: f32) -> Self {
@@ -213,7 +222,8 @@ impl SvgCanvas {
         text_anchor: &str,
         angle_deg: f32,
     ) {
-        if !pos.is_finite() || !font_size.is_finite() || font_size <= 0.0 || !angle_deg.is_finite() {
+        if !pos.is_finite() || !font_size.is_finite() || font_size <= 0.0 || !angle_deg.is_finite()
+        {
             return;
         }
         let anchor = match text_anchor {
@@ -287,12 +297,15 @@ impl SvgCanvas {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::geom::Size;
+    use super::*;
 
     #[test]
     fn escapes() {
-        assert_eq!(escape_xml("<a href=\"x\">&'</a>"), "&lt;a href=&quot;x&quot;&gt;&amp;&#39;&lt;/a&gt;");
+        assert_eq!(
+            escape_xml("<a href=\"x\">&'</a>"),
+            "&lt;a href=&quot;x&quot;&gt;&amp;&#39;&lt;/a&gt;"
+        );
         assert_eq!(escape_xml("Hello\x00World\x07!"), "HelloWorld!");
         // Verify invisible zero-width and Unicode tag characters are cleanly stripped
         let with_invisibles = "Clean\u{200B}Text\u{034F}With\u{2060}Zero\u{E0041}Width";

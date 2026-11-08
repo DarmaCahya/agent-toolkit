@@ -28,8 +28,16 @@ fn main() {
     let svg_arch = chart_arch.to_svg().expect("render svg");
     let dur_arch = start.elapsed();
 
-    fs::write(format!("{}/probe_flowchart_arch_td.svg", out_dir), &svg_arch).unwrap();
-    println!("1. System Architecture Flowchart: {:?} (SVG size: {} bytes)", dur_arch, svg_arch.len());
+    fs::write(
+        format!("{}/probe_flowchart_arch_td.svg", out_dir),
+        &svg_arch,
+    )
+    .unwrap();
+    println!(
+        "1. System Architecture Flowchart: {:?} (SVG size: {} bytes)",
+        dur_arch,
+        svg_arch.len()
+    );
 
     // Case 2: Business Logic Approval Pipeline (Left-to-Right)
     let dsl_biz = r#"
@@ -51,7 +59,11 @@ fn main() {
     let dur_biz = start_biz.elapsed();
 
     fs::write(format!("{}/probe_flowchart_biz_lr.svg", out_dir), &svg_biz).unwrap();
-    println!("2. Business Approval Pipeline: {:?} (SVG size: {} bytes)", dur_biz, svg_biz.len());
+    println!(
+        "2. Business Approval Pipeline: {:?} (SVG size: {} bytes)",
+        dur_biz,
+        svg_biz.len()
+    );
 
     println!("Mini-project benchmark artifacts generated in {}", out_dir);
 }

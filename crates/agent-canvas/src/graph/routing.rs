@@ -4,11 +4,7 @@ use crate::canvas::{Path, Point};
 
 /// Computes an orthogonal 90° Manhattan path between two nodes.
 /// Returns `(path, midpoint_for_label)`.
-pub fn route_orthogonal_edge(
-    from: &Node,
-    to: &Node,
-    direction: Direction,
-) -> (Path, Point) {
+pub fn route_orthogonal_edge(from: &Node, to: &Node, direction: Direction) -> (Path, Point) {
     let mut path = Path::new();
 
     match direction {

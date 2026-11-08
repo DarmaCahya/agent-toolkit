@@ -52,7 +52,10 @@ impl PdfError {
                         | std::io::ErrorKind::WouldBlock
                 )
             }
-            PdfError::Read(_) | PdfError::Render(_) | PdfError::Generate(_) | PdfError::InvalidPdf(_) => false,
+            PdfError::Read(_)
+            | PdfError::Render(_)
+            | PdfError::Generate(_)
+            | PdfError::InvalidPdf(_) => false,
         }
     }
 

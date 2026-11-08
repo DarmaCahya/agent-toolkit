@@ -24,8 +24,16 @@ pub struct CartesianPlot {
 impl CartesianPlot {
     pub fn new(width: f32, height: f32) -> Self {
         Self {
-            width: if width.is_finite() && width > 50.0 { width } else { 600.0 },
-            height: if height.is_finite() && height > 50.0 { height } else { 400.0 },
+            width: if width.is_finite() && width > 50.0 {
+                width
+            } else {
+                600.0
+            },
+            height: if height.is_finite() && height > 50.0 {
+                height
+            } else {
+                400.0
+            },
             title: None,
             x_label: None,
             y_label: None,
@@ -77,7 +85,10 @@ impl CartesianPlot {
     pub fn plot_area(&self) -> Rect {
         let w = (self.width - self.margin_left - self.margin_right).max(10.0);
         let h = (self.height - self.margin_top - self.margin_bottom).max(10.0);
-        Rect::new(Point::new(self.margin_left, self.margin_top), Size::new(w, h))
+        Rect::new(
+            Point::new(self.margin_left, self.margin_top),
+            Size::new(w, h),
+        )
     }
 
     /// Renders frame, title, gridlines, and axis labels onto the canvas.
@@ -148,7 +159,8 @@ impl CartesianPlot {
         }
 
         // 3. Draw Category Labels on X-axis (rotate 30 degrees if label is long or many categories)
-        let should_rotate = self.x_categories.iter().any(|c| c.len() > 8) || self.x_categories.len() > 5;
+        let should_rotate =
+            self.x_categories.iter().any(|c| c.len() > 8) || self.x_categories.len() > 5;
         for (i, cat) in self.x_categories.iter().enumerate() {
             let x_pos = cat_scale.map_center(i);
             if x_pos.is_finite() {
@@ -176,8 +188,14 @@ impl CartesianPlot {
 
         // 4. Draw Axis border
         canvas.draw_line(
-            Point::new(plot_rect.origin.x, plot_rect.origin.y + plot_rect.size.height),
-            Point::new(plot_rect.origin.x + plot_rect.size.width, plot_rect.origin.y + plot_rect.size.height),
+            Point::new(
+                plot_rect.origin.x,
+                plot_rect.origin.y + plot_rect.size.height,
+            ),
+            Point::new(
+                plot_rect.origin.x + plot_rect.size.width,
+                plot_rect.origin.y + plot_rect.size.height,
+            ),
             crate::canvas::Stroke::new(palette.border(), 1.5),
         );
 
