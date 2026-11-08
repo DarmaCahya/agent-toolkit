@@ -88,7 +88,12 @@ impl FunnelChart {
         let max_w = self.width - margin_l - margin_r;
         let center_x = margin_l + max_w / 2.0;
 
-        let max_val = self.stages.iter().map(|s| s.value).fold(0.0f32, f32::max).max(1.0);
+        let max_val = self
+            .stages
+            .iter()
+            .map(|s| s.value)
+            .fold(0.0f32, f32::max)
+            .max(1.0);
         let n = self.stages.len();
         let stage_gap = 6.0;
         let stage_h = (usable_h - (n as f32 - 1.0) * stage_gap) / (n as f32).max(1.0);
@@ -97,7 +102,11 @@ impl FunnelChart {
             let top_y = margin_t + i as f32 * (stage_h + stage_gap);
             let bottom_y = top_y + stage_h;
 
-            let top_val = if stage.value.is_finite() && stage.value > 0.0 { stage.value } else { 0.0 };
+            let top_val = if stage.value.is_finite() && stage.value > 0.0 {
+                stage.value
+            } else {
+                0.0
+            };
             let next_val = if i + 1 < n {
                 if self.stages[i + 1].value.is_finite() && self.stages[i + 1].value > 0.0 {
                     self.stages[i + 1].value
@@ -146,7 +155,11 @@ impl FunnelChart {
             // Conversion percentage from previous stage
             if i > 0 {
                 let prev_val = self.stages[i - 1].value;
-                let conv_pct = if prev_val > 0.0 { (stage.value / prev_val) * 100.0 } else { 0.0 };
+                let conv_pct = if prev_val > 0.0 {
+                    (stage.value / prev_val) * 100.0
+                } else {
+                    0.0
+                };
                 let drop_text = format!("{:.1}% conv", conv_pct);
                 canvas.draw_text(
                     Point::new(margin_l + max_w + 15.0, top_y + 10.0),

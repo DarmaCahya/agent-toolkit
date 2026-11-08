@@ -47,13 +47,23 @@ pub fn polar_to_cartesian(center_x: f32, center_y: f32, radius: f32, angle_rad: 
 /// is empty or the total is not positive. The last slice ends exactly at
 /// `start_angle_rad + TAU`.
 pub fn calculate_slice_angles(values: &[f32], start_angle_rad: f32) -> Vec<(f32, f32, f32)> {
-    let clean = |v: f32| if v.is_finite() && v > 0.0 { v as f64 } else { 0.0 };
+    let clean = |v: f32| {
+        if v.is_finite() && v > 0.0 {
+            v as f64
+        } else {
+            0.0
+        }
+    };
     let total: f64 = values.iter().map(|&v| clean(v)).sum();
     if values.is_empty() || !total.is_finite() || total <= 0.0 {
         return Vec::new();
     }
 
-    let start = if start_angle_rad.is_finite() { start_angle_rad as f64 } else { 0.0 };
+    let start = if start_angle_rad.is_finite() {
+        start_angle_rad as f64
+    } else {
+        0.0
+    };
     let last = values.len() - 1;
     let mut cumulative = 0.0_f64;
     let mut prev_end = start as f32;

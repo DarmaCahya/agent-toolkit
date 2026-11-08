@@ -42,7 +42,12 @@ impl Color {
 
     /// `a` is clamped to `0.0..=1.0`; NaN becomes `1.0`.
     pub fn from_rgba(r: u8, g: u8, b: u8, a: f32) -> Self {
-        Self { r, g, b, a: sanitize_alpha(a) }
+        Self {
+            r,
+            g,
+            b,
+            a: sanitize_alpha(a),
+        }
     }
 
     /// Parses `#RGB`, `#RRGGBB` or `#RRGGBBAA` (leading `#` optional).
@@ -60,7 +65,12 @@ impl Color {
         match digits.len() {
             3 => Ok(Self::from_rgb(nibble(0), nibble(1), nibble(2))),
             6 => Ok(Self::from_rgb(pair(0), pair(2), pair(4))),
-            8 => Ok(Self::from_rgba(pair(0), pair(2), pair(4), f32::from(pair(6)) / 255.0)),
+            8 => Ok(Self::from_rgba(
+                pair(0),
+                pair(2),
+                pair(4),
+                f32::from(pair(6)) / 255.0,
+            )),
             n => Err(ColorParseError::InvalidLength(n)),
         }
     }
@@ -86,7 +96,10 @@ impl Color {
     }
 
     pub fn with_opacity(&self, a: f32) -> Color {
-        Color { a: sanitize_alpha(a), ..*self }
+        Color {
+            a: sanitize_alpha(a),
+            ..*self
+        }
     }
 }
 
@@ -182,12 +195,24 @@ mod tests {
 
     #[test]
     fn hex_parsing() {
-        assert_eq!(Color::from_hex("#2563EB").unwrap(), Color::from_rgb(0x25, 0x63, 0xEB));
-        assert_eq!(Color::from_hex("#fa0").unwrap(), Color::from_rgb(0xFF, 0xAA, 0x00));
+        assert_eq!(
+            Color::from_hex("#2563EB").unwrap(),
+            Color::from_rgb(0x25, 0x63, 0xEB)
+        );
+        assert_eq!(
+            Color::from_hex("#fa0").unwrap(),
+            Color::from_rgb(0xFF, 0xAA, 0x00)
+        );
         let c = Color::from_hex("#00000080").unwrap();
         assert!((c.a - 128.0 / 255.0).abs() < 1e-6);
-        assert_eq!(Color::from_hex("#12"), Err(ColorParseError::InvalidLength(2)));
-        assert_eq!(Color::from_hex("#12G456"), Err(ColorParseError::InvalidDigit('G')));
+        assert_eq!(
+            Color::from_hex("#12"),
+            Err(ColorParseError::InvalidLength(2))
+        );
+        assert_eq!(
+            Color::from_hex("#12G456"),
+            Err(ColorParseError::InvalidDigit('G'))
+        );
         assert!(Color::from_hex("#é1é").is_err());
     }
 

@@ -130,7 +130,8 @@ impl WaterfallChart {
                 red
             };
 
-            let rect = Rect::new(Point::new(bar_left, top_y), Size::new(bar_w, bar_h)).with_radius(3.0, 3.0);
+            let rect = Rect::new(Point::new(bar_left, top_y), Size::new(bar_w, bar_h))
+                .with_radius(3.0, 3.0);
             canvas.draw_rect(rect, None, Some(Fill::new(color, 0.95)));
 
             // Value label above/inside bar (so CFO can immediately read exact figures)
@@ -142,7 +143,11 @@ impl WaterfallChart {
                 format!("-{:.0}", start - end)
             };
 
-            let label_y = if top_y - 6.0 > 10.0 { top_y - 6.0 } else { top_y + 14.0 };
+            let label_y = if top_y - 6.0 > 10.0 {
+                top_y - 6.0
+            } else {
+                top_y + 14.0
+            };
             canvas.draw_text(
                 Point::new(center_x, label_y),
                 &val_label,

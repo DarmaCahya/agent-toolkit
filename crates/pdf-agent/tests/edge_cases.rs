@@ -1,5 +1,5 @@
-use std::fs;
 use pdf_agent::{PdfError, PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader};
+use std::fs;
 
 fn get_table_pdf() -> Vec<u8> {
     fs::read("corpus/table.pdf").expect("read table.pdf")
@@ -74,7 +74,9 @@ fn test_edge_unwritable_output_file() {
     let res = PdfReader::read(&bytes, Some(opts));
     assert!(res.is_err());
     match res.unwrap_err() {
-        PdfError::InvalidArgument(msg) => assert!(msg.contains("sandbox") || msg.contains("prohibited")),
+        PdfError::InvalidArgument(msg) => {
+            assert!(msg.contains("sandbox") || msg.contains("prohibited"))
+        }
         other => panic!("Expected InvalidArgument, got {:?}", other),
     }
 
@@ -91,8 +93,14 @@ fn test_edge_unwritable_output_file() {
 fn test_password_redaction_in_debug() {
     let opts = PdfReadOptions::new().with_password("my_super_secret_password_123");
     let debug_str = format!("{:?}", opts);
-    assert!(debug_str.contains("<redacted>"), "Debug format must redact password");
-    assert!(!debug_str.contains("my_super_secret_password_123"), "Debug must not leak plaintext password");
+    assert!(
+        debug_str.contains("<redacted>"),
+        "Debug format must redact password"
+    );
+    assert!(
+        !debug_str.contains("my_super_secret_password_123"),
+        "Debug must not leak plaintext password"
+    );
 }
 
 #[test]
@@ -113,8 +121,14 @@ fn test_edge_rasterizer_scale_and_nan_safety() {
 #[test]
 fn test_edge_empty_query_rejected() {
     let bytes = get_table_pdf();
-    assert!(PdfReader::search_keyword(&bytes, "").is_err(), "Empty query must be rejected");
-    assert!(PdfReader::search_keyword(&bytes, "   ").is_err(), "Whitespace query must be rejected");
+    assert!(
+        PdfReader::search_keyword(&bytes, "").is_err(),
+        "Empty query must be rejected"
+    );
+    assert!(
+        PdfReader::search_keyword(&bytes, "   ").is_err(),
+        "Whitespace query must be rejected"
+    );
 }
 
 #[test]
@@ -164,7 +178,9 @@ fn test_extract_headings_outline() {
     let bytes = get_table_pdf();
     let headings = PdfReader::extract_headings(&bytes).unwrap();
     assert!(!headings.is_empty(), "table.pdf contains headings");
-    assert!(headings.iter().any(|(_, text)| text.contains("Quarterly") || text.starts_with('#')));
+    assert!(headings
+        .iter()
+        .any(|(_, text)| text.contains("Quarterly") || text.starts_with('#')));
 }
 
 #[test]
@@ -172,7 +188,10 @@ fn test_edge_extract_markdown_budget_guard_on_500_pages() {
     let bytes = std::fs::read("corpus/500_pages.pdf").expect("500_pages.pdf");
     // 500_pages has 1.95M characters, exceeding the 500,000 char budget for extract_markdown
     let res = PdfReader::extract_markdown(&bytes);
-    assert!(res.is_err(), "Raw extract_markdown on 500_pages must be rejected to prevent context explosion");
+    assert!(
+        res.is_err(),
+        "Raw extract_markdown on 500_pages must be rejected to prevent context explosion"
+    );
     match res.unwrap_err() {
         PdfError::LimitExceeded(msg) => {
             assert!(msg.contains("exceeds single-turn budget"));

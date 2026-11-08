@@ -116,7 +116,11 @@ pub struct CategoryScale {
 
 impl CategoryScale {
     pub fn new(categories: Vec<String>, range_start: f32, range_end: f32, padding: f32) -> Self {
-        let padding = if padding.is_nan() { 0.0 } else { padding.clamp(0.0, 1.0) };
+        let padding = if padding.is_nan() {
+            0.0
+        } else {
+            padding.clamp(0.0, 1.0)
+        };
         Self {
             categories,
             range_start: finite_or(range_start, 0.0),
@@ -230,7 +234,12 @@ mod tests {
 
     #[test]
     fn category_geometry() {
-        let cats = vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()];
+        let cats = vec![
+            "a".to_string(),
+            "b".to_string(),
+            "c".to_string(),
+            "d".to_string(),
+        ];
         let s = CategoryScale::new(cats, 0.0, 400.0, 0.2);
         assert!(approx(s.step_size(), 100.0));
         assert!(approx(s.bandwidth(), 80.0));

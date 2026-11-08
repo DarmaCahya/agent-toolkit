@@ -43,7 +43,10 @@ impl Point {
 
     /// Linear interpolation; `t` is not clamped, so extrapolation is allowed.
     pub fn lerp(&self, other: Point, t: f32) -> Point {
-        Point::new(self.x + (other.x - self.x) * t, self.y + (other.y - self.y) * t)
+        Point::new(
+            self.x + (other.x - self.x) * t,
+            self.y + (other.y - self.y) * t,
+        )
     }
 
     pub fn is_finite(&self) -> bool {
@@ -81,7 +84,12 @@ pub struct Rect {
 
 impl Rect {
     pub const fn new(origin: Point, size: Size) -> Self {
-        Self { origin, size, rx: 0.0, ry: 0.0 }
+        Self {
+            origin,
+            size,
+            rx: 0.0,
+            ry: 0.0,
+        }
     }
 
     /// Sets corner radii; negative or NaN values are treated as zero.
@@ -92,7 +100,10 @@ impl Rect {
     }
 
     pub fn is_finite(&self) -> bool {
-        self.origin.is_finite() && self.size.is_finite() && self.rx.is_finite() && self.ry.is_finite()
+        self.origin.is_finite()
+            && self.size.is_finite()
+            && self.rx.is_finite()
+            && self.ry.is_finite()
     }
 
     /// Edge-inclusive containment test.
@@ -119,7 +130,10 @@ impl Rect {
     }
 
     pub fn bottom_right(&self) -> Point {
-        Point::new(self.origin.x + self.size.width, self.origin.y + self.size.height)
+        Point::new(
+            self.origin.x + self.size.width,
+            self.origin.y + self.size.height,
+        )
     }
 
     /// Grows the rect by `amount` on every side. Negative values shrink it;
@@ -150,7 +164,11 @@ pub struct Stroke {
 
 impl Stroke {
     pub fn new(color: Color, width: f32) -> Self {
-        Self { color, width, dash_array: None }
+        Self {
+            color,
+            width,
+            dash_array: None,
+        }
     }
 
     pub fn with_dash(mut self, dash_array: impl Into<String>) -> Self {
@@ -168,7 +186,11 @@ pub struct Fill {
 impl Fill {
     /// `opacity` is clamped to `0.0..=1.0` (NaN becomes `1.0`).
     pub fn new(color: Color, opacity: f32) -> Self {
-        let opacity = if opacity.is_nan() { 1.0 } else { opacity.clamp(0.0, 1.0) };
+        let opacity = if opacity.is_nan() {
+            1.0
+        } else {
+            opacity.clamp(0.0, 1.0)
+        };
         Self { color, opacity }
     }
 
@@ -200,9 +222,13 @@ impl PathCommand {
             PathCommand::MoveTo(p) | PathCommand::LineTo(p) => p.is_finite(),
             PathCommand::QuadTo(a, b) => a.is_finite() && b.is_finite(),
             PathCommand::CubicTo(a, b, c) => a.is_finite() && b.is_finite() && c.is_finite(),
-            PathCommand::ArcTo { rx, ry, x_axis_rotation, end, .. } => {
-                rx.is_finite() && ry.is_finite() && x_axis_rotation.is_finite() && end.is_finite()
-            }
+            PathCommand::ArcTo {
+                rx,
+                ry,
+                x_axis_rotation,
+                end,
+                ..
+            } => rx.is_finite() && ry.is_finite() && x_axis_rotation.is_finite() && end.is_finite(),
             PathCommand::Close => true,
         }
     }
@@ -259,7 +285,14 @@ impl Path {
         sweep: bool,
         end: Point,
     ) -> Self {
-        self.commands.push(PathCommand::ArcTo { rx, ry, x_axis_rotation, large_arc, sweep, end });
+        self.commands.push(PathCommand::ArcTo {
+            rx,
+            ry,
+            x_axis_rotation,
+            large_arc,
+            sweep,
+            end,
+        });
         self
     }
 
@@ -325,7 +358,14 @@ impl Path {
                         fmt_num(p.y)
                     );
                 }
-                PathCommand::ArcTo { rx, ry, x_axis_rotation, large_arc, sweep, end } => {
+                PathCommand::ArcTo {
+                    rx,
+                    ry,
+                    x_axis_rotation,
+                    large_arc,
+                    sweep,
+                    end,
+                } => {
                     if !has_moved {
                         out.push_str("M0 0 ");
                         has_moved = true;

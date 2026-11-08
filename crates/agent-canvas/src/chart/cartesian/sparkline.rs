@@ -44,8 +44,12 @@ impl Sparkline {
     }
 
     pub fn to_svg(&self) -> Result<String> {
-        let mut canvas = SvgCanvas::new(self.width, self.height)
-            .with_view_box(0.0, 0.0, self.width, self.height);
+        let mut canvas = SvgCanvas::new(self.width, self.height).with_view_box(
+            0.0,
+            0.0,
+            self.width,
+            self.height,
+        );
 
         if self.values.len() < 2 {
             return Ok(canvas.to_svg());

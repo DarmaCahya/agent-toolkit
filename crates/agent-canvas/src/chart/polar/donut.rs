@@ -107,7 +107,17 @@ impl DonutChart {
         let outer_r = (self.height * 0.35).min(center_x - 30.0);
         let inner_r = outer_r * self.hole_ratio;
 
-        let values: Vec<f32> = self.slices.iter().map(|s| if s.value.is_finite() && s.value > 0.0 { s.value } else { 0.0 }).collect();
+        let values: Vec<f32> = self
+            .slices
+            .iter()
+            .map(|s| {
+                if s.value.is_finite() && s.value > 0.0 {
+                    s.value
+                } else {
+                    0.0
+                }
+            })
+            .collect();
         let total_val: f32 = values.iter().sum();
 
         if total_val <= 0.0 || values.is_empty() {
@@ -158,13 +168,28 @@ impl DonutChart {
                     let (in1_x, in1_y) = polar_to_cartesian(center_x, center_y, inner_r, s_rad);
                     let (in2_x, in2_y) = polar_to_cartesian(center_x, center_y, inner_r, mid_rad);
                     path = path.move_to(Point::new(in1_x, in1_y));
-                    path = path.arc_to(inner_r, inner_r, 0.0, false, false, Point::new(in2_x, in2_y));
-                    path = path.arc_to(inner_r, inner_r, 0.0, false, false, Point::new(in1_x, in1_y));
+                    path = path.arc_to(
+                        inner_r,
+                        inner_r,
+                        0.0,
+                        false,
+                        false,
+                        Point::new(in2_x, in2_y),
+                    );
+                    path = path.arc_to(
+                        inner_r,
+                        inner_r,
+                        0.0,
+                        false,
+                        false,
+                        Point::new(in1_x, in1_y),
+                    );
                 }
                 path = path.close();
                 canvas.draw_path(&path, None, Some(Fill::solid(color)));
             } else {
-                let (out_start_x, out_start_y) = polar_to_cartesian(center_x, center_y, outer_r, s_rad);
+                let (out_start_x, out_start_y) =
+                    polar_to_cartesian(center_x, center_y, outer_r, s_rad);
                 let (out_end_x, out_end_y) = polar_to_cartesian(center_x, center_y, outer_r, e_rad);
                 let large_arc = delta > std::f32::consts::PI;
 
@@ -180,8 +205,10 @@ impl DonutChart {
                 );
 
                 if inner_r > 0.0 {
-                    let (in_end_x, in_end_y) = polar_to_cartesian(center_x, center_y, inner_r, e_rad);
-                    let (in_start_x, in_start_y) = polar_to_cartesian(center_x, center_y, inner_r, s_rad);
+                    let (in_end_x, in_end_y) =
+                        polar_to_cartesian(center_x, center_y, inner_r, e_rad);
+                    let (in_start_x, in_start_y) =
+                        polar_to_cartesian(center_x, center_y, inner_r, s_rad);
                     path = path.line_to(Point::new(in_end_x, in_end_y));
                     path = path.arc_to(
                         inner_r,
@@ -209,7 +236,8 @@ impl DonutChart {
 
             // Color box
             canvas.draw_rect(
-                Rect::new(Point::new(legend_x, legend_y), Size::new(12.0, 12.0)).with_radius(2.0, 2.0),
+                Rect::new(Point::new(legend_x, legend_y), Size::new(12.0, 12.0))
+                    .with_radius(2.0, 2.0),
                 None,
                 Some(Fill::solid(color)),
             );
@@ -228,7 +256,11 @@ impl DonutChart {
         // Center Metric Text (if donut)
         if self.hole_ratio > 0.0 {
             if let Some(ref p) = self.center_text_primary {
-                let offset_y = if self.center_text_secondary.is_some() { -6.0 } else { 5.0 };
+                let offset_y = if self.center_text_secondary.is_some() {
+                    -6.0
+                } else {
+                    5.0
+                };
                 canvas.draw_text(
                     Point::new(center_x, center_y + offset_y),
                     p,

@@ -18,7 +18,10 @@ fn test_flowchart_from_dsl_linear_and_branching() {
 
     let svg = chart.to_svg().expect("render svg");
     assert!(svg.starts_with("<svg"));
-    assert!(svg.contains(r#"id="arrowhead""#), "Must embed arrowhead marker");
+    assert!(
+        svg.contains(r#"id="arrowhead""#),
+        "Must embed arrowhead marker"
+    );
     assert!(svg.contains("marker-end=\"url(#arrowhead)\""));
     assert!(svg.contains("Start Pipeline"));
     assert!(svg.contains("Generate Vector SVG"));
@@ -69,7 +72,11 @@ fn test_programmatic_flowchart_api() {
         .with_theme(ThemeMode::Dark)
         .add_node(Node::new("1", "User Input", NodeShape::Terminal))
         .add_node(Node::new("2", "Process Worker", NodeShape::Process))
-        .add_edge(Edge::new("1", "2").with_label("Submit").with_style(EdgeStyle::Solid));
+        .add_edge(
+            Edge::new("1", "2")
+                .with_label("Submit")
+                .with_style(EdgeStyle::Solid),
+        );
 
     let svg = chart.to_svg().expect("render programmatic flowchart");
     assert!(svg.contains("Programmatic Architecture"));

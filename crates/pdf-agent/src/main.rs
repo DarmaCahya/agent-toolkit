@@ -1,15 +1,13 @@
+use pdf_agent::{PdfGenerator, PdfRasterizer, PdfReader};
 use std::env;
 use std::fs;
 use std::process;
 use std::time::Instant;
-use pdf_agent::{PdfGenerator, PdfRasterizer, PdfReader};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
-        eprintln!(
-            "Usage: pdf_agent_cli <read|render|generate|cycle|benchmark> [args...]"
-        );
+        eprintln!("Usage: pdf_agent_cli <read|render|generate|cycle|benchmark> [args...]");
         process::exit(1);
     }
 
@@ -130,12 +128,28 @@ fn main() {
             let render_dur = t2.elapsed();
 
             println!("Cycle Test Completed:");
-            println!("- Generation:  {:.4}s ({} bytes PDF)", gen_dur.as_secs_f64(), pdf_bytes.len());
-            println!("- Read / MD:   {:.4}s ({} chars extracted)", read_dur.as_secs_f64(), md.len());
-            println!("- Rasterize:   {:.4}s ({}x{} PNG)", render_dur.as_secs_f64(), img.width(), img.height());
+            println!(
+                "- Generation:  {:.4}s ({} bytes PDF)",
+                gen_dur.as_secs_f64(),
+                pdf_bytes.len()
+            );
+            println!(
+                "- Read / MD:   {:.4}s ({} chars extracted)",
+                read_dur.as_secs_f64(),
+                md.len()
+            );
+            println!(
+                "- Rasterize:   {:.4}s ({}x{} PNG)",
+                render_dur.as_secs_f64(),
+                img.width(),
+                img.height()
+            );
         }
         "benchmark" => {
-            let corpus_dir = args.get(2).map(|s| s.as_str()).unwrap_or("/srv/hermes/workspace/pdf-benchmarks/corpus");
+            let corpus_dir = args
+                .get(2)
+                .map(|s| s.as_str())
+                .unwrap_or("/srv/hermes/workspace/pdf-benchmarks/corpus");
             println!("Running automated benchmark on corpus: {}", corpus_dir);
 
             let entries = match fs::read_dir(corpus_dir) {

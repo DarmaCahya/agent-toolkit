@@ -1,6 +1,6 @@
+use pdf_agent::{PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader};
 use std::fs;
 use std::path::Path;
-use pdf_agent::{PdfGenerator, PdfRasterizer, PdfReadOptions, PdfReader};
 
 fn get_corpus_file(name: &str) -> Vec<u8> {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
@@ -38,7 +38,10 @@ fn test_pdf_generation_contract() {
 
     let pdf_bytes = PdfGenerator::from_html(html).expect("Generation should succeed");
     assert!(!pdf_bytes.is_empty());
-    assert!(pdf_bytes.starts_with(b"%PDF-"), "Must be a valid PDF format");
+    assert!(
+        pdf_bytes.starts_with(b"%PDF-"),
+        "Must be a valid PDF format"
+    );
 }
 
 #[test]
@@ -49,7 +52,10 @@ fn test_pdf_reading_markdown_contract() {
 
     let md = PdfReader::extract_markdown(&bytes).expect("Extract markdown");
     assert!(!md.is_empty());
-    assert!(md.contains('|'), "Should reconstruct markdown table with pipe characters");
+    assert!(
+        md.contains('|'),
+        "Should reconstruct markdown table with pipe characters"
+    );
 }
 
 #[test]
@@ -59,13 +65,22 @@ fn test_structured_reading_with_agent_guards() {
     assert_eq!(total, 434);
 
     // Test 1: Windowed read (only first 3 pages)
-    let opts = PdfReadOptions::new().with_pages(1, 3).with_max_chars(100_000);
+    let opts = PdfReadOptions::new()
+        .with_pages(1, 3)
+        .with_max_chars(100_000);
     let res = PdfReader::read(&bytes, Some(opts)).expect("Windowed read");
     assert_eq!(res.page_start, 1);
     assert_eq!(res.page_end, 3);
     assert_eq!(res.total_pages, 434);
-    assert!(res.truncated, "Must be truncated because only 3 of 434 pages read");
-    assert!(res.note.as_ref().unwrap().contains("Showing pages 1-3 of 434"));
+    assert!(
+        res.truncated,
+        "Must be truncated because only 3 of 434 pages read"
+    );
+    assert!(res
+        .note
+        .as_ref()
+        .unwrap()
+        .contains("Showing pages 1-3 of 434"));
     assert!(!res.scanned_likely, "500_pages has real text");
 
     // Test 2: Character budget cap (e.g. 200 chars)
@@ -73,7 +88,11 @@ fn test_structured_reading_with_agent_guards() {
     let budget_res = PdfReader::read(&bytes, Some(budget_opts)).expect("Budget read");
     assert!(budget_res.markdown.chars().count() <= 200);
     assert!(budget_res.truncated);
-    assert!(budget_res.note.as_ref().unwrap().contains("character limit"));
+    assert!(budget_res
+        .note
+        .as_ref()
+        .unwrap()
+        .contains("character limit"));
 }
 
 #[test]
@@ -83,7 +102,10 @@ fn test_scanned_pdf_detection_heuristics() {
     let empty_pdf = PdfGenerator::from_html(empty_html).expect("Generate empty PDF");
 
     let res = PdfReader::read(&empty_pdf, None).expect("Read empty PDF");
-    assert!(res.scanned_likely, "Should detect empty text layer as scanned/image-only");
+    assert!(
+        res.scanned_likely,
+        "Should detect empty text layer as scanned/image-only"
+    );
     assert!(res.note.as_ref().unwrap().contains("pdf_render"));
 }
 
@@ -102,7 +124,10 @@ fn test_full_document_file_offload() {
     assert!(Path::new(out_file).exists());
 
     let content = fs::read_to_string(out_file).expect("Read back offloaded file");
-    assert!(content.contains('|'), "Extracted file must contain table pipes");
+    assert!(
+        content.contains('|'),
+        "Extracted file must contain table pipes"
+    );
 
     let _ = fs::remove_file(out_file);
 }
@@ -116,7 +141,10 @@ fn test_pdf_rasterization_contract() {
     assert!(!image.as_rgba().is_empty());
 
     let png_bytes = image.to_png_bytes().expect("Encode PNG");
-    assert!(png_bytes.starts_with(b"\x89PNG\r\n\x1a\n"), "Must be valid PNG header");
+    assert!(
+        png_bytes.starts_with(b"\x89PNG\r\n\x1a\n"),
+        "Must be valid PNG header"
+    );
 }
 
 #[test]

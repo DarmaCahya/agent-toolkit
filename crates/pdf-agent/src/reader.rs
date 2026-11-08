@@ -43,11 +43,13 @@ impl PdfReader {
 
         if doc.is_encrypted() {
             if let Some(pwd) = password {
-                let ok = doc
-                    .authenticate(pwd.as_bytes())
-                    .map_err(|e| PdfError::Encrypted(format!("Password authentication failed: {}", e)))?;
+                let ok = doc.authenticate(pwd.as_bytes()).map_err(|e| {
+                    PdfError::Encrypted(format!("Password authentication failed: {}", e))
+                })?;
                 if !ok {
-                    return Err(PdfError::Encrypted("Incorrect password for protected PDF".into()));
+                    return Err(PdfError::Encrypted(
+                        "Incorrect password for protected PDF".into(),
+                    ));
                 }
             } else if !doc.is_authenticated() {
                 return Err(PdfError::Encrypted(
@@ -115,7 +117,9 @@ impl PdfReader {
 
         if let Some(limit) = opts.page_limit {
             if limit == 0 {
-                return Err(PdfError::InvalidArgument("page_limit must be greater than 0".into()));
+                return Err(PdfError::InvalidArgument(
+                    "page_limit must be greater than 0".into(),
+                ));
             }
         }
 
@@ -180,7 +184,8 @@ impl PdfReader {
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
                     .as_nanos();
-                let tmp_path = safe_path.with_extension(format!("tmp_{}_{}.tmp", std::process::id(), nanos));
+                let tmp_path =
+                    safe_path.with_extension(format!("tmp_{}_{}.tmp", std::process::id(), nanos));
 
                 let p_limit = opts.page_limit.unwrap_or(total).max(1);
                 let start_idx = p_start - 1;
@@ -230,7 +235,9 @@ impl PdfReader {
                     }
 
                     writer.flush()?;
-                    let inner = writer.into_inner().map_err(|e| PdfError::Io(e.into_error()))?;
+                    let inner = writer
+                        .into_inner()
+                        .map_err(|e| PdfError::Io(e.into_error()))?;
                     inner.sync_all()?;
                     Ok((total_chars, failed_pages, preview))
                 })();
@@ -340,7 +347,8 @@ impl PdfReader {
                                 current_char_count = current_char_count.saturating_add(7);
                             }
                             collected_md.push_str(trimmed);
-                            current_char_count = current_char_count.saturating_add(trimmed.chars().count());
+                            current_char_count =
+                                current_char_count.saturating_add(trimmed.chars().count());
                         }
                         last_processed_page = p_idx + 1;
 
@@ -350,7 +358,8 @@ impl PdfReader {
                             collected_md = kept;
                             truncated = true;
                             // Set next_page_start to next page only if there are pages left
-                            next_page_start = (last_processed_page < total).then_some(last_processed_page + 1);
+                            next_page_start =
+                                (last_processed_page < total).then_some(last_processed_page + 1);
                             notes.push(format!(
                                 "Output cut at {max_chars} character limit on page {last_processed_page}."
                             ));
@@ -376,7 +385,8 @@ impl PdfReader {
             }
 
             let pages_read_count = last_processed_page.saturating_sub(start_idx);
-            let scanned_likely = pages_read_count > 0 && (current_char_count / pages_read_count < 25);
+            let scanned_likely =
+                pages_read_count > 0 && (current_char_count / pages_read_count < 25);
 
             if scanned_likely {
                 notes.push(
@@ -385,7 +395,10 @@ impl PdfReader {
             }
 
             let requested_count = end_idx.saturating_sub(start_idx);
-            if requested_count > 0 && failed_pages.len() == requested_count && collected_md.is_empty() {
+            if requested_count > 0
+                && failed_pages.len() == requested_count
+                && collected_md.is_empty()
+            {
                 return Err(PdfError::Read(format!(
                     "Failed to parse all requested pages ({} of {}): {}",
                     failed_pages.len(),
@@ -413,7 +426,10 @@ impl PdfReader {
     }
 
     /// Read a PDF file from a path with structured agent options. All page numbers are 1-indexed.
-    pub fn read_file<P: AsRef<Path>>(path: P, options: Option<PdfReadOptions>) -> Result<PdfReadResult> {
+    pub fn read_file<P: AsRef<Path>>(
+        path: P,
+        options: Option<PdfReadOptions>,
+    ) -> Result<PdfReadResult> {
         let bytes = Self::read_bounded_file(path)?;
         Self::read(&bytes, options)
     }
@@ -505,7 +521,9 @@ impl PdfReader {
     ) -> Result<Vec<usize>> {
         let trimmed_query = query.trim();
         if trimmed_query.is_empty() {
-            return Err(PdfError::InvalidArgument("Search query cannot be empty".to_string()));
+            return Err(PdfError::InvalidArgument(
+                "Search query cannot be empty".to_string(),
+            ));
         }
 
         guarded(|| {

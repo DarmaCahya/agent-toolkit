@@ -5,11 +5,7 @@ use crate::canvas::{FontMetrics, Point, Rect, Size};
 use std::collections::{HashMap, HashSet, VecDeque};
 
 /// Solves discrete ranks and bounding box coordinates for each node in the flowchart.
-pub fn compute_layout(
-    nodes: &mut [Node],
-    edges: &[Edge],
-    direction: Direction,
-) -> (f32, f32) {
+pub fn compute_layout(nodes: &mut [Node], edges: &[Edge], direction: Direction) -> (f32, f32) {
     if nodes.is_empty() {
         return (400.0, 300.0);
     }
@@ -38,7 +34,9 @@ pub fn compute_layout(
         if in_degree.contains_key(&edge.to_id) {
             *in_degree.entry(edge.to_id.clone()).or_insert(0) += 1;
         }
-        adj.entry(edge.from_id.clone()).or_default().push(edge.to_id.clone());
+        adj.entry(edge.from_id.clone())
+            .or_default()
+            .push(edge.to_id.clone());
     }
 
     let mut ranks: HashMap<String, usize> = HashMap::new();
@@ -148,13 +146,16 @@ pub fn compute_layout(
             let mut max_y_reached = 300.0f32;
 
             // First find maximum height of all layers to vertically center single nodes
-            let layer_heights: Vec<f32> = layers.iter().map(|layer| {
-                let mut h = 0.0;
-                for &idx in layer {
-                    h += nodes[idx].rect.size.height + node_gap;
-                }
-                (h - node_gap).max(0.0)
-            }).collect();
+            let layer_heights: Vec<f32> = layers
+                .iter()
+                .map(|layer| {
+                    let mut h = 0.0;
+                    for &idx in layer {
+                        h += nodes[idx].rect.size.height + node_gap;
+                    }
+                    (h - node_gap).max(0.0)
+                })
+                .collect();
             let max_total_h = layer_heights.iter().fold(200.0f32, |a, &b| a.max(b));
 
             for (r, layer) in layers.iter().enumerate() {
