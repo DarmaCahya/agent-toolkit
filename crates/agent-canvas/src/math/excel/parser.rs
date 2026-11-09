@@ -1,8 +1,12 @@
 //! Pratt parser producing the expression tree.
 #![forbid(unsafe_code)]
 
+use std::ops::Range;
+
+use super::error::{ParseError, ParseErrorKind};
 use super::eval::dismantle;
-use super::lexer::Token;
+use super::functions::arity;
+use super::lexer::{Spanned, Token};
 use super::MAX_DEPTH;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -67,30 +71,73 @@ fn infix_bp(op: BinOp) -> u8 {
 }
 
 struct Parser {
-    tokens: Vec<Token>,
+    tokens: Vec<Spanned>,
     pos: usize,
+    /// Where the input ends (empty span for end-of-input errors).
+    end: usize,
+}
+
+/// The error for finding `found` where `expected` was required.
+fn unexpected(found: &Spanned, expected: Vec<&'static str>) -> ParseError {
+    let kind = if found.tok == Token::Eof {
+        ParseErrorKind::UnexpectedEof
+    } else {
+        ParseErrorKind::UnexpectedToken
+    };
+    ParseError::new(kind, found.span.clone(), expected)
+}
+
+/// Rejects a call to a known function with too few or too many arguments. Unknown names
+/// pass (they evaluate to `#NAME?`).
+fn check_arity(name: &str, got: usize, span: Range<usize>) -> Result<(), ParseError> {
+    match arity(name) {
+        Some((min, max)) if got < min || got > max => Err(ParseError::new(
+            ParseErrorKind::WrongArgCount {
+                name: name.to_string(),
+                min,
+                max: (max != usize::MAX).then_some(max),
+                got,
+            },
+            span,
+            Vec::new(),
+        )),
+        _ => Ok(()),
+    }
 }
 
 impl Parser {
     fn peek(&self) -> &Token {
-        self.tokens.get(self.pos).unwrap_or(&Token::Eof)
+        self.tokens.get(self.pos).map_or(&Token::Eof, |t| &t.tok)
     }
 
-    fn bump(&mut self) -> Token {
-        let t = self.tokens.get(self.pos).cloned().unwrap_or(Token::Eof);
+    fn span_here(&self) -> Range<usize> {
+        self.tokens
+            .get(self.pos)
+            .map_or(self.end..self.end, |t| t.span.clone())
+    }
+
+    fn bump(&mut self) -> Spanned {
+        let t = self.tokens.get(self.pos).cloned().unwrap_or(Spanned {
+            tok: Token::Eof,
+            span: self.end..self.end,
+        });
         self.pos += 1;
         t
     }
 
-    fn enter(depth: usize) -> Result<usize, ()> {
+    fn enter(depth: usize, at: &Range<usize>) -> Result<usize, ParseError> {
         if depth >= MAX_DEPTH {
-            Err(())
+            Err(ParseError::new(
+                ParseErrorKind::LimitExceeded,
+                at.clone(),
+                Vec::new(),
+            ))
         } else {
             Ok(depth + 1)
         }
     }
 
-    fn parse_expr(&mut self, min_bp: u8, depth: usize) -> Result<Expr, ()> {
+    fn parse_expr(&mut self, min_bp: u8, depth: usize) -> Result<Expr, ParseError> {
         let mut lhs = self.parse_prefix(depth)?;
         loop {
             match self.peek() {
@@ -116,10 +163,10 @@ impl Parser {
                     self.bump();
                     let rhs = match self.parse_expr(bp + 1, depth) {
                         Ok(rhs) => rhs,
-                        Err(()) => {
+                        Err(e) => {
                             // Avoid recursing down a long left spine on drop.
                             dismantle(lhs);
-                            return Err(());
+                            return Err(e);
                         }
                     };
                     lhs = Expr::Binary {
@@ -134,45 +181,71 @@ impl Parser {
         Ok(lhs)
     }
 
-    fn parse_prefix(&mut self, depth: usize) -> Result<Expr, ()> {
-        match self.bump() {
+    /// Parses call arguments after the opening parenthesis `open`; returns the argument
+    /// list and the end offset of the closing parenthesis. Directly after `(` the closing
+    /// parenthesis is also acceptable.
+    fn parse_args(
+        &mut self,
+        depth: usize,
+        open: &Range<usize>,
+    ) -> Result<(Vec<Expr>, usize), ParseError> {
+        let d = Self::enter(depth, open)?;
+        let mut args = Vec::new();
+        if *self.peek() == Token::RParen {
+            let close = self.bump();
+            return Ok((args, close.span.end));
+        }
+        loop {
+            let first = args.is_empty();
+            let here = self.span_here();
+            let arg = self.parse_expr(0, d).map_err(|mut e| {
+                let at_start = matches!(
+                    e.kind,
+                    ParseErrorKind::UnexpectedEof | ParseErrorKind::UnexpectedToken
+                ) && e.span == here;
+                if first && at_start && e.expected == ["expression"] {
+                    e.expected.push(")");
+                }
+                e
+            })?;
+            args.push(arg);
+            let t = self.bump();
+            match t.tok {
+                Token::Comma => {}
+                Token::RParen => return Ok((args, t.span.end)),
+                _ => return Err(unexpected(&t, vec![",", ")"])),
+            }
+        }
+    }
+
+    fn parse_prefix(&mut self, depth: usize) -> Result<Expr, ParseError> {
+        let t = self.bump();
+        match t.tok {
             Token::Number(n) => Ok(Expr::Number(n)),
             Token::Str(s) => Ok(Expr::Text(s)),
             Token::Bool(b) => Ok(Expr::Bool(b)),
             Token::Ref(r) => Ok(Expr::Ref(r)),
             Token::Ident(name) => {
-                if self.bump() != Token::LParen {
-                    return Err(());
+                let open = self.bump();
+                if open.tok != Token::LParen {
+                    return Err(unexpected(&open, vec!["("]));
                 }
-                let d = Self::enter(depth)?;
-                let mut args = Vec::new();
-                if *self.peek() == Token::RParen {
-                    self.bump();
-                } else {
-                    loop {
-                        args.push(self.parse_expr(0, d)?);
-                        match self.bump() {
-                            Token::Comma => {}
-                            Token::RParen => break,
-                            _ => return Err(()),
-                        }
-                    }
-                }
-                Ok(Expr::Call {
-                    name: name.to_ascii_uppercase(),
-                    args,
-                })
+                let (args, end) = self.parse_args(depth, &open.span)?;
+                let name = name.to_ascii_uppercase();
+                check_arity(&name, args.len(), t.span.start..end)?;
+                Ok(Expr::Call { name, args })
             }
             Token::LParen => {
-                let d = Self::enter(depth)?;
+                let d = Self::enter(depth, &t.span)?;
                 let inner = self.parse_expr(0, d)?;
-                if self.bump() != Token::RParen {
-                    return Err(());
+                let close = self.bump();
+                if close.tok != Token::RParen {
+                    return Err(unexpected(&close, vec![")"]));
                 }
                 Ok(inner)
             }
             Token::Op(op @ (BinOp::Add | BinOp::Sub)) => {
-                let d = Self::enter(depth)?;
+                let d = Self::enter(depth, &t.span)?;
                 let operand = self.parse_prefix(d)?;
                 let op = if op == BinOp::Sub {
                     UnOp::Neg
@@ -184,17 +257,23 @@ impl Parser {
                     operand: Box::new(operand),
                 })
             }
-            _ => Err(()),
+            _ => Err(unexpected(&t, vec!["expression"])),
         }
     }
 }
 
 /// Parses a full token stream; trailing tokens are an error.
-pub(crate) fn parse(tokens: Vec<Token>) -> Result<Expr, ()> {
-    let mut p = Parser { tokens, pos: 0 };
+pub(crate) fn parse(tokens: Vec<Spanned>) -> Result<Expr, ParseError> {
+    let end = tokens.last().map_or(0, |t| t.span.end);
+    let mut p = Parser {
+        tokens,
+        pos: 0,
+        end,
+    };
     let expr = p.parse_expr(0, 0)?;
     if *p.peek() != Token::Eof {
-        return Err(());
+        let t = p.bump();
+        return Err(unexpected(&t, Vec::new()));
     }
     Ok(expr)
 }
@@ -210,7 +289,7 @@ mod tests {
     use super::*;
     use crate::math::excel::lexer::tokenize;
 
-    fn p(s: &str) -> Result<Expr, ()> {
+    fn p(s: &str) -> Result<Expr, ParseError> {
         parse(tokenize(s).unwrap())
     }
 
@@ -304,19 +383,52 @@ mod tests {
     }
 
     #[test]
+    fn eof_errors_are_located_with_expected_items() {
+        let e = p("SUM(").unwrap_err();
+        assert_eq!(e.kind, ParseErrorKind::UnexpectedEof);
+        assert_eq!(e.span, 4..4);
+        assert_eq!(e.expected, vec!["expression", ")"]);
+        let e = p("SUM(1,").unwrap_err();
+        assert_eq!(e.kind, ParseErrorKind::UnexpectedEof);
+        assert_eq!(e.expected, vec!["expression"]);
+        let e = p("SUM(1").unwrap_err();
+        assert_eq!(e.expected, vec![",", ")"]);
+        let e = p("(1").unwrap_err();
+        assert_eq!(e.expected, vec![")"]);
+        let e = p("1+").unwrap_err();
+        assert_eq!(e.expected, vec!["expression"]);
+    }
+
+    #[test]
+    fn token_errors_carry_the_token_span() {
+        let e = p("1 2").unwrap_err();
+        assert_eq!(e.kind, ParseErrorKind::UnexpectedToken);
+        assert_eq!(e.span, 2..3);
+        let e = p("SUM(*)").unwrap_err();
+        assert_eq!(e.span, 4..5);
+        assert_eq!(e.expected, vec!["expression", ")"]);
+    }
+
+    #[test]
     fn depth_boundary_parens() {
         let ok = format!("{}1{}", "(".repeat(64), ")".repeat(64));
         let bad = format!("{}1{}", "(".repeat(65), ")".repeat(65));
         assert!(p(&ok).is_ok());
-        assert!(p(&bad).is_err());
+        assert_eq!(p(&bad).unwrap_err().kind, ParseErrorKind::LimitExceeded);
     }
 
     #[test]
     fn depth_boundary_prefix_and_calls() {
         assert!(p(&format!("{}1", "-".repeat(64))).is_ok());
-        assert!(p(&format!("{}1", "-".repeat(65))).is_err());
+        assert_eq!(
+            p(&format!("{}1", "-".repeat(65))).unwrap_err().kind,
+            ParseErrorKind::LimitExceeded
+        );
         let call = |n: usize| format!("{}1{}", "ABS(".repeat(n), ")".repeat(n));
         assert!(p(&call(64)).is_ok());
-        assert!(p(&call(65)).is_err());
+        assert_eq!(
+            p(&call(65)).unwrap_err().kind,
+            ParseErrorKind::LimitExceeded
+        );
     }
 }

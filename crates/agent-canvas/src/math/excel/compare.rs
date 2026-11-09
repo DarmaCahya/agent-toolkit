@@ -31,6 +31,7 @@ fn rank(v: &Value) -> u8 {
         Value::Text(_) => 1,
         Value::Bool(_) => 2,
         Value::Error(_) => 3,
+        Value::Blank => 0,
     }
 }
 
@@ -45,11 +46,30 @@ pub(crate) fn compare(a: &Value, b: &Value) -> Result<Ordering, ExcelError> {
         return Err(*e);
     }
     Ok(match (a, b) {
+        (Value::Blank, Value::Blank) => Ordering::Equal,
+        (Value::Blank, other) => compare_ok(&blank_like(other), other),
+        (other, Value::Blank) => compare_ok(other, &blank_like(other)),
+        _ => compare_ok(a, b),
+    })
+}
+
+/// What a blank reads as when compared with `other`: 0, `""` or FALSE.
+fn blank_like(other: &Value) -> Value {
+    match other {
+        Value::Text(_) => Value::Text(String::new()),
+        Value::Bool(_) => Value::Bool(false),
+        _ => Value::Number(0.0),
+    }
+}
+
+/// Ordering of two non-error, non-blank values.
+fn compare_ok(a: &Value, b: &Value) -> Ordering {
+    match (a, b) {
         (Value::Number(x), Value::Number(y)) => compare_numbers(*x, *y),
         (Value::Text(x), Value::Text(y)) => compare_text(x, y),
         (Value::Bool(x), Value::Bool(y)) => x.cmp(y),
         _ => rank(a).cmp(&rank(b)),
-    })
+    }
 }
 
 #[cfg(test)]
@@ -125,6 +145,36 @@ mod tests {
         assert_eq!(compare(&txt("b"), &txt("A")), Ok(Ordering::Greater));
         assert_eq!(compare(&txt("ab"), &txt("abc")), Ok(Ordering::Less));
         assert_eq!(compare(&txt(""), &txt("a")), Ok(Ordering::Less));
+    }
+
+    #[test]
+    fn blank_against_every_type() {
+        let blank = Value::Blank;
+        // As the number 0.
+        assert_eq!(compare(&blank, &num(0.0)), Ok(Ordering::Equal));
+        assert_eq!(compare(&blank, &num(1.0)), Ok(Ordering::Less));
+        assert_eq!(compare(&blank, &num(-1.0)), Ok(Ordering::Greater));
+        assert_eq!(compare(&num(0.0), &blank), Ok(Ordering::Equal));
+        assert_eq!(compare(&num(2.0), &blank), Ok(Ordering::Greater));
+        // As the empty text.
+        assert_eq!(compare(&blank, &txt("")), Ok(Ordering::Equal));
+        assert_eq!(compare(&txt(""), &blank), Ok(Ordering::Equal));
+        assert_eq!(compare(&blank, &txt("a")), Ok(Ordering::Less));
+        assert_eq!(compare(&txt("a"), &blank), Ok(Ordering::Greater));
+        // As FALSE.
+        assert_eq!(compare(&blank, &Value::Bool(false)), Ok(Ordering::Equal));
+        assert_eq!(compare(&Value::Bool(false), &blank), Ok(Ordering::Equal));
+        assert_eq!(compare(&blank, &Value::Bool(true)), Ok(Ordering::Less));
+        assert_eq!(compare(&Value::Bool(true), &blank), Ok(Ordering::Greater));
+        // Against itself.
+        assert_eq!(compare(&blank, &Value::Blank), Ok(Ordering::Equal));
+    }
+
+    #[test]
+    fn blank_does_not_hide_errors() {
+        let e = Value::Error(ExcelError::DivZero);
+        assert_eq!(compare(&Value::Blank, &e), Err(ExcelError::DivZero));
+        assert_eq!(compare(&e, &Value::Blank), Err(ExcelError::DivZero));
     }
 
     #[test]

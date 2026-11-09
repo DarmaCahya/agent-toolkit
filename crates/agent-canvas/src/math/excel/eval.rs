@@ -5,7 +5,7 @@ use super::compare::compare;
 use super::functions;
 use super::lexer::is_valid_reference;
 use super::parser::{BinOp, Expr, UnOp};
-use super::value::{finite_or_num, to_number, to_text, Cell, ExcelError, RangeProvider, Value};
+use super::value::{coerce_text, finite_or_num, to_number, Cell, ExcelError, RangeProvider, Value};
 use super::MAX_DEPTH;
 
 /// Total cells a single formula may pull from a provider.
@@ -55,11 +55,11 @@ fn resolve_ref(reference: &str, ctx: &mut Ctx<'_>) -> Result<Vec<Cell>, ExcelErr
         .collect())
 }
 
-/// A one-cell range used as a scalar; an empty cell reads as `0`.
+/// A one-cell range used as a scalar; an empty cell is [`Value::Blank`].
 fn cells_to_scalar(cells: Vec<Cell>) -> Value {
     let mut it = cells.into_iter();
     match (it.next(), it.next()) {
-        (Some(Cell::Empty), None) => Value::Number(0.0),
+        (Some(Cell::Empty), None) => Value::Blank,
         (Some(Cell::Value(v)), None) => v,
         _ => Value::Error(ExcelError::Value),
     }
@@ -165,7 +165,7 @@ fn apply_binary(op: BinOp, a: &Value, b: &Value) -> Value {
                 _ => power(x, y),
             }
         }
-        BinOp::Concat => match (to_text(a), to_text(b)) {
+        BinOp::Concat => match (coerce_text(a), coerce_text(b)) {
             (Ok(l), Ok(r)) => Value::Text(format!("{l}{r}")),
             (Err(e), _) | (_, Err(e)) => Value::Error(e),
         },

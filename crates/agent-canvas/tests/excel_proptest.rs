@@ -151,4 +151,33 @@ proptest! {
             prop_assert!(x.is_finite());
         }
     }
+
+    // Fallible and infallible paths agree, never panic, and every reported span is a
+    // valid half-open range of char boundaries inside the original input.
+    #[test]
+    fn try_eval_spans_are_valid(s in any::<String>()) {
+        let infallible = ExcelEvaluator::eval(&s);
+        match ExcelEvaluator::try_eval(&s) {
+            Ok(v) => prop_assert_eq!(v, infallible),
+            Err(e) => {
+                prop_assert_eq!(infallible, Value::Error(ExcelError::Value));
+                prop_assert!(e.span.start <= e.span.end);
+                prop_assert!(e.span.end <= s.len());
+                prop_assert!(s.is_char_boundary(e.span.start));
+                prop_assert!(s.is_char_boundary(e.span.end));
+            }
+        }
+    }
+
+    #[test]
+    fn try_eval_spans_are_valid_for_structured_input(s in structured()) {
+        let infallible = ExcelEvaluator::eval_with(&s, &Mixed);
+        match ExcelEvaluator::try_eval_with(&s, &Mixed) {
+            Ok(v) => prop_assert_eq!(v, infallible),
+            Err(e) => {
+                prop_assert_eq!(infallible, Value::Error(ExcelError::Value));
+                prop_assert!(e.span.start <= e.span.end && e.span.end <= s.len());
+            }
+        }
+    }
 }
