@@ -28,16 +28,21 @@ name = "issue_009_demo"
 path = "examples/issue-009-demo/main.rs"
 
 [[example]]
+name = "latex_quadratic"
+path = "examples/latex-quadratic/main.rs"
+
+[[example]]
 name = "enterprise_suite"
 path = "../../examples/enterprise-suite/main.rs"
 
 [dependencies]
 thiserror = "2"
 serde = { version = "1.0", features = ["derive"], optional = true }
+ttf-parser = { version = "0.25", default-features = false, features = ["std", "opentype-layout"] } # `std` required: float math (tan) in no_std build fails to compile (research R2)
 
 [dev-dependencies]
 proptest = { version = "1", default-features = false, features = ["std"] }
-
+insta = { version = "1", default-features = false }
 [features]
 default = ["serde"]
 serde = ["dep:serde"]

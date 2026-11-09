@@ -7,7 +7,7 @@ This repository is a **Cargo Workspace Monorepo** hosting high-performance, zero
 | Crate | Crates.io | Status | Description |
 | :--- | :---: | :---: | :--- |
 | [**`pdf-agent`**](crates/pdf-agent) | [![crates.io](https://img.shields.io/crates/v/pdf-agent.svg)](https://crates.io/crates/pdf-agent) | 🟢 **v0.1.0 (Live)** | Memory-guarded PDF facade: structured Markdown extraction, pure CPU visual rasterization, and HTML-to-PDF vector generation. |
-| [**`agent-canvas`**](crates/agent-canvas) | [![crates.io](https://img.shields.io/crates/v/agent-canvas.svg)](https://crates.io/crates/agent-canvas) | 🟡 **v0.1.0 (In Progress)** | Visual computing & calculation artifacts: flowcharts, business charts, LaTeX math typesetting, and Excel formula evaluation. |
+| [**`agent-canvas`**](crates/agent-canvas) | [![crates.io](https://img.shields.io/crates/v/agent-canvas.svg)](https://crates.io/crates/agent-canvas) | 🟡 **v0.1.0 (In Progress)** | Visual computing & calculation artifacts: flowcharts, business charts, LaTeX math typesetting to vector SVG (fractions, roots, scripts, big operators; bundled STIX Two Math subset, see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)), and Excel formula evaluation. |
 
 ---
 
