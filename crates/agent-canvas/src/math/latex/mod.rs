@@ -42,11 +42,17 @@ pub const MAX_DEPTH: usize = 64;
 ///           | symbol-cmd | group | '\frac' group group
 ///           | '\sqrt' ('[' formula ']')? group
 ///           | '\sum' | '\int' | '\prod'
+///           | spacing                           // takes no scripts
 /// arg      := single-token-atom | group
 /// group    := '{' formula '}'
 /// symbol-cmd := \alpha … \omega | \Gamma … \Omega | \pm | \cdot | \times
 ///             | \leq | \geq | \neq | \infty
+/// spacing  := '\,' (3mu) | '\:' (4mu) | '\;' (5mu) | '\!' (-3mu)
+///           | '\ ' (1/3 em) | '\quad' (1 em) | '\qquad' (2 em)
 /// ```
+///
+/// Mu spaces scale with the script style, em spaces do not. A formula made only
+/// of spacing yields [`MathError::EmptyFormula`].
 ///
 /// Whitespace is ignored. Everything else (for example `\left`, `\text`,
 /// matrices, accents, font commands) is rejected with a [`MathError`] that
@@ -258,7 +264,13 @@ fn layout(font: &MathFont, latex: &str) -> Result<LBox, MathError> {
         parser::NodeKind::Group(items) => atoms::build_atoms(items),
         _ => atoms::build_atoms(std::slice::from_ref(&ast)),
     };
-    let root = Layout::new(font).layout_list(&atoms, Style::DISPLAY)?;
+    let mut root = Layout::new(font).layout_list(&atoms, Style::DISPLAY)?;
+    // Net negative glue (`x\!\!\!`) must not yield a negative canvas width.
+    root.width = root.width.max(0.0);
     root.finite()?;
+    // A formula made only of spacing draws nothing; plain `{}` is unaffected.
+    if root.items.is_empty() && atoms::contains_glue(&atoms) {
+        return Err(MathError::EmptyFormula);
+    }
     Ok(root)
 }

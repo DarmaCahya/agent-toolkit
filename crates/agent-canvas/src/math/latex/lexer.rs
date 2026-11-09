@@ -54,24 +54,40 @@ pub(crate) fn lex(input: &str) -> Result<Vec<Token>, MathError> {
                     .take_while(|ch| ch.is_ascii_alphabetic())
                     .collect();
                 if name.is_empty() {
-                    return match chars.get(i.saturating_add(1)) {
-                        None => Err(MathError::UnexpectedEof {
-                            pos: chars.len(),
-                            expected: "a command name after `\\`".into(),
-                        }),
-                        // `\,` `\;` `\ ` etc. are single-symbol commands.
-                        Some(&ch) if ch.is_ascii_punctuation() || ch == ' ' => {
-                            Err(MathError::Unsupported {
+                    match chars.get(i.saturating_add(1)) {
+                        // Explicit spacing: exactly one char is consumed.
+                        Some(&ch @ (',' | ':' | ';' | '!' | ' ')) => {
+                            tokens.push(Token {
+                                kind: TokenKind::Command(ch.to_string()),
                                 pos,
-                                name: ch.to_string(),
-                                hint: "spacing and symbol commands are out of scope for v1".into(),
+                            });
+                            i = i.saturating_add(2);
+                            continue;
+                        }
+                        None => {
+                            return Err(MathError::UnexpectedEof {
+                                pos: chars.len(),
+                                expected: "a command name after `\\`".into(),
                             })
                         }
-                        Some(&ch) => Err(MathError::UnexpectedChar {
-                            pos: i.saturating_add(1),
-                            ch,
-                        }),
-                    };
+                        // Other single-symbol commands are not supported.
+                        Some(&ch) if ch.is_ascii_punctuation() => {
+                            return Err(MathError::Unsupported {
+                                pos,
+                                name: ch.to_string(),
+                                hint: "only the spacing commands \\, \\: \\; \\! \\quad \\qquad \
+                                       and backslash-space are supported; other symbol commands \
+                                       are out of scope for v1"
+                                    .into(),
+                            })
+                        }
+                        Some(&ch) => {
+                            return Err(MathError::UnexpectedChar {
+                                pos: i.saturating_add(1),
+                                ch,
+                            })
+                        }
+                    }
                 }
                 i = i.saturating_add(name.chars().count());
                 TokenKind::Command(name)

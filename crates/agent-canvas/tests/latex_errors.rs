@@ -59,7 +59,7 @@ fn unsupported_commands_are_named() {
         (r"\hat{x}", "hat", 0),
         (r"\newcommand", "newcommand", 0),
         (r"\mathbf{x}", "mathbf", 0),
-        (r"a\,b", ",", 1),
+        (r"a\@b", "@", 1),
         (r"x + \displaystyle y", "displaystyle", 4),
     ] {
         let e = err(src);

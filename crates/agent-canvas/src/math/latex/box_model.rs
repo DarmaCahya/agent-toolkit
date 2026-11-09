@@ -6,6 +6,7 @@ use ttf_parser::GlyphId;
 use super::atoms::{space, Atom, AtomClass, AtomContent, Style};
 use super::error::MathError;
 use super::font::{MathConsts, MathFont};
+use super::parser::Glue;
 
 /// Largest vertical stretch factor accepted for a scaled radical.
 const MAX_RADICAL_STRETCH: f64 = 200.0;
@@ -184,6 +185,14 @@ impl<'a> Layout<'a> {
         let mut out = LBox::empty();
         let mut prev: Option<AtomClass> = None;
         for atom in atoms {
+            if let AtomContent::Space(glue) = &atom.content {
+                // Glue is invisible to classification: `prev` stays the last real atom.
+                out.advance(match *glue {
+                    Glue::Mu(m) => m * style.mu_scale(&self.c),
+                    Glue::Em(e) => e,
+                });
+                continue;
+            }
             let b = self.layout_atom(atom, style)?;
             if let Some(p) = prev {
                 let mu = space(p, atom.class, style);
@@ -199,6 +208,8 @@ impl<'a> Layout<'a> {
 
     fn layout_atom(&self, atom: &Atom, style: Style) -> Result<LBox, MathError> {
         match &atom.content {
+            // Glue is applied in `layout_list`; reaching it here adds no width.
+            AtomContent::Space(_) => Ok(LBox::empty()),
             AtomContent::Glyph(ch) => self.glyph_box(*ch, style),
             AtomContent::List(items) => self.layout_list(items, style),
             AtomContent::Frac { num, den } => {

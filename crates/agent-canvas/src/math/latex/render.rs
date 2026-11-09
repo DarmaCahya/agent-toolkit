@@ -35,9 +35,21 @@ pub(crate) fn render(font: &MathFont, root: &LBox) -> Result<String, MathError> 
         })
         .collect();
 
-    let min_x = -PAD;
+    // Negative spacing (`\\!`) can push ink outside the advance box; widen the viewBox so
+    // nothing is clipped.
+    let (mut lo, mut hi) = (0.0_f64, root.width);
+    for item in &root.items {
+        let (x0, x1) = match *item {
+            Item::Glyph { gid, x, scale, .. } => (x, x + font.advance(gid) * scale),
+            Item::ScaledGlyph { gid, x, sx, .. } => (x, x + font.advance(gid) * sx),
+            Item::Rule { x, w, .. } => (x, x + w),
+        };
+        lo = lo.min(x0);
+        hi = hi.max(x1);
+    }
+    let min_x = lo * UNITS - PAD;
     let min_y = -root.height * UNITS - PAD;
-    let w = root.width * UNITS + 2.0 * PAD;
+    let w = (hi - lo) * UNITS + 2.0 * PAD;
     let h = (root.height + root.depth) * UNITS + 2.0 * PAD;
 
     let mut out = String::new();

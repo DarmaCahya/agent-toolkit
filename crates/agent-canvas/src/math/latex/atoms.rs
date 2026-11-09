@@ -1,7 +1,7 @@
 //! TeX atoms: classes, styles, inter-atom spacing and AST-to-atom conversion.
 
 use super::font::MathConsts;
-use super::parser::{BigOpKind, Node, NodeKind};
+use super::parser::{BigOpKind, Glue, Node, NodeKind};
 
 /// TeX atom classes (the `Inner` class is omitted in v1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -192,6 +192,32 @@ pub(crate) enum AtomContent {
         sup: Option<Vec<Atom>>,
         sub: Option<Vec<Atom>>,
     },
+    /// Explicit horizontal glue. Its atom class is a placeholder that is never
+    /// read: glue is transparent to classification and automatic spacing.
+    Space(Glue),
+}
+
+impl Atom {
+    /// True for explicit spacing atoms.
+    pub(crate) fn is_glue(&self) -> bool {
+        matches!(self.content, AtomContent::Space(_))
+    }
+}
+
+/// True when `atoms` (or any nested list) contains explicit glue.
+pub(crate) fn contains_glue(atoms: &[Atom]) -> bool {
+    let nested = |l: &Option<Vec<Atom>>| l.as_deref().is_some_and(contains_glue);
+    atoms.iter().any(|a| match &a.content {
+        AtomContent::Space(_) => true,
+        AtomContent::Glyph(_) => false,
+        AtomContent::List(items) => contains_glue(items),
+        AtomContent::Frac { num, den } => contains_glue(num) || contains_glue(den),
+        AtomContent::Sqrt { index, body } => nested(index) || contains_glue(body),
+        AtomContent::Scripts { nucleus, sup, sub } => {
+            contains_glue(std::slice::from_ref(nucleus)) || nested(sup) || nested(sub)
+        }
+        AtomContent::BigOp { sup, sub, .. } => nested(sup) || nested(sub),
+    })
 }
 
 /// Converts a node list into atoms, applying Bin-to-Ord demotion.
@@ -252,30 +278,37 @@ fn node_to_atom(node: &Node) -> Atom {
                 sub: sub.as_deref().map(arg_atoms),
             },
         },
+        NodeKind::Space(glue) => Atom {
+            class: AtomClass::Ord,
+            content: AtomContent::Space(*glue),
+        },
     }
 }
 
 fn demote_bins(atoms: &mut [Atom]) {
     use AtomClass::{Bin, Close, Op, Open, Ord, Punct, Rel};
-    let mut prev: Option<AtomClass> = None;
+    // Index and class of the last non-glue atom; glue is transparent.
+    let mut prev: Option<(usize, AtomClass)> = None;
     for i in 0..atoms.len() {
-        let cur = atoms.get(i).map(|a| a.class);
-        match (prev, cur) {
-            (None | Some(Bin | Op | Rel | Open | Punct), Some(Bin)) => {
+        let Some(cur) = atoms.get(i).filter(|a| !a.is_glue()).map(|a| a.class) else {
+            continue;
+        };
+        match (prev.map(|p| p.1), cur) {
+            (None | Some(Bin | Op | Rel | Open | Punct), Bin) => {
                 if let Some(a) = atoms.get_mut(i) {
                     a.class = Ord;
                 }
             }
-            (Some(Bin), Some(Rel | Close | Punct)) => {
-                if let Some(p) = i.checked_sub(1).and_then(|j| atoms.get_mut(j)) {
+            (Some(Bin), Rel | Close | Punct) => {
+                if let Some(p) = prev.and_then(|(j, _)| atoms.get_mut(j)) {
                     p.class = Ord;
                 }
             }
             _ => {}
         }
-        prev = atoms.get(i).map(|a| a.class);
+        prev = atoms.get(i).map(|a| (i, a.class));
     }
-    if let Some(last) = atoms.last_mut() {
+    if let Some(last) = atoms.iter_mut().rev().find(|a| !a.is_glue()) {
         if last.class == Bin {
             last.class = Ord;
         }
@@ -329,6 +362,64 @@ mod tests {
         assert_eq!(classes("(a+)"), vec![Open, Ord, Ord, Close]); // before Close
         assert_eq!(classes("a+,b"), vec![Ord, Ord, Punct, Ord]); // before Punct
         assert_eq!(classes("a-b"), vec![Ord, Bin, Ord]);
+    }
+
+    fn glyph(class: AtomClass) -> Atom {
+        Atom {
+            class,
+            content: AtomContent::Glyph('x'),
+        }
+    }
+
+    fn glue() -> Atom {
+        Atom {
+            class: AtomClass::Ord,
+            content: AtomContent::Space(Glue::Mu(3.0)),
+        }
+    }
+
+    /// Demotes `real` with and without a glue atom inserted at `at` and asserts
+    /// the non-glue classes agree.
+    fn assert_glue_transparent(real: &[AtomClass], at: usize) {
+        let mut plain: Vec<Atom> = real.iter().map(|c| glyph(*c)).collect();
+        let mut spaced = plain.clone();
+        spaced.insert(at, glue());
+        demote_bins(&mut plain);
+        demote_bins(&mut spaced);
+        let got: Vec<AtomClass> = spaced
+            .iter()
+            .filter(|a| !a.is_glue())
+            .map(|a| a.class)
+            .collect();
+        let want: Vec<AtomClass> = plain.iter().map(|a| a.class).collect();
+        assert_eq!(got, want, "{real:?} with glue at {at}");
+    }
+
+    #[test]
+    fn bin_demotion_ignores_glue() {
+        use AtomClass::*;
+        assert_glue_transparent(&[Bin, Ord], 0); // [Space, Bin, Ord]
+        assert_glue_transparent(&[Bin, Ord], 1); // [Bin, Space, Ord]
+        assert_glue_transparent(&[Ord, Bin, Rel], 2); // [Ord, Bin, Space, Rel]
+        assert_glue_transparent(&[Open, Bin, Ord], 1); // [Open, Space, Bin, Ord]
+        assert_glue_transparent(&[Ord, Bin, Ord], 2); // [Ord, Bin, Space, Ord]
+        assert_glue_transparent(&[Ord, Bin, Ord], 1); // [Ord, Space, Bin, Ord]
+        assert_glue_transparent(&[Ord, Bin], 2); // trailing glue after Bin
+        assert_glue_transparent(&[Ord, Bin, Close], 2);
+        assert_glue_transparent(&[Ord, Bin, Punct], 2);
+    }
+
+    #[test]
+    fn glue_detection() {
+        assert!(glue().is_glue());
+        assert!(!glyph(AtomClass::Ord).is_glue());
+        assert!(contains_glue(&[glue()]));
+        assert!(!contains_glue(&[glyph(AtomClass::Ord)]));
+        let nested = Atom {
+            class: AtomClass::Ord,
+            content: AtomContent::List(vec![glue()]),
+        };
+        assert!(contains_glue(&[nested]));
     }
 
     #[test]
