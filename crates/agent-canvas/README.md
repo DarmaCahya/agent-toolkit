@@ -12,6 +12,9 @@ Zero external runtime dependencies (no Node.js, no Chromium, no Python).
 1. **Flowcharts & Diagrams (`graph`)**: Decision trees, sequence lifelines, and system architecture blocks with Manhattan 90° routing.
 2. **Executive Business Charts (`chart`)**: Donut/Pie, 2x2 Quadrant Matrix (BCG/Eisenhower), Sales Funnel, and Stacked/Grouped Bars.
 3. **Math & Formulae (`math`)**: LaTeX math formula typesetting to SVG path curves + Pure-Rust Excel formula evaluator (`=SUM`, `=IF`, etc.).
+   - **LaTeX → SVG**: `MathTypesetter::render_to_svg(r"\frac{-b \pm \sqrt{b^2 - 4ac}}{2a}")` returns a deterministic, vector-only SVG (glyph outlines, no `<text>`/fonts/scripts) typeset with TeX layout rules and OpenType MATH metrics from a bundled STIX Two Math subset.
+   - **v1 grammar**: letters, digits, `+ - = < > ( ) ,`, `^`/`_`, `{}` groups, `\frac`, `\sqrt[n]{}`, `\sum \int \prod`, Greek letters, `\pm \cdot \times \leq \geq \neq \infty`. Limits: 8192 chars, nesting depth 64. Out of scope: `\left/\right`, `\text`, matrices, accents, font/style commands, macros (errors carry a position and hint).
+   - The bundled font is a modified, renamed subset of STIX Two Math under OFL-1.1; see [`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 4. **Business Components (`component`)**: Pure-Rust QR Code matrix generator + KPI executive metric cards.
 
 ## Excel formula evaluator
