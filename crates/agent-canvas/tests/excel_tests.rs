@@ -9,7 +9,7 @@
 use agent_canvas::math::{Cell, ExcelError, ExcelEvaluator, RangeProvider, Value};
 
 fn d(formula: &str) -> String {
-    ExcelEvaluator::eval(formula).as_str().into_owned()
+    ExcelEvaluator::eval(formula).to_text().into_owned()
 }
 
 fn err(e: ExcelError) -> Value {
@@ -65,7 +65,7 @@ mod story1 {
     fn headline_example() {
         let v = ExcelEvaluator::eval("=IF(SUM(10, 20) > 25, \"Profit\", \"Loss\")");
         assert_eq!(v, Value::Text("Profit".into()));
-        assert_eq!(v.as_str(), "Profit");
+        assert_eq!(v.as_str(), Some("Profit"));
     }
 
     #[test]
@@ -240,12 +240,12 @@ mod story4 {
             ("=OR()", "#VALUE!"),
             ("=NOT()", "#VALUE!"),
             ("=CONCAT(\"a\",1,TRUE)", "a1TRUE"),
-            ("=CONCAT()", ""),
-            ("=SUM()", "0"),
-            ("=COUNT()", "0"),
-            ("=AVERAGE()", "#DIV/0!"),
-            ("=MIN()", "0"),
-            ("=MAX()", "0"),
+            ("=CONCAT()", "#VALUE!"),
+            ("=SUM()", "#VALUE!"),
+            ("=COUNT()", "#VALUE!"),
+            ("=AVERAGE()", "#VALUE!"),
+            ("=MIN()", "#VALUE!"),
+            ("=MAX()", "#VALUE!"),
             ("=AVERAGE(1,2,3)", "2"),
             ("=MIN(3,1,2)", "1"),
             ("=MAX(3,1,2)", "3"),
@@ -510,13 +510,13 @@ const CORPUS: &[(&str, &str)] = &[
     ("=SUM(1,2/0)", "#DIV/0!"),
     ("=SUM(SUM(1,2),SUM(3,4))", "10"),
     ("=SUM(1E308,1E308)", "#NUM!"),
-    ("=SUM()", "0"),
+    ("=SUM()", "#VALUE!"),
     ("=AVERAGE(1,2,3,4)", "2.5"),
     ("=AVERAGE(10)", "10"),
     (r#"=AVERAGE("4",TRUE)"#, "2.5"),
     (r#"=AVERAGE(1,"x")"#, "#VALUE!"),
     ("=AVERAGE(0,0)", "0"),
-    ("=AVERAGE()", "#DIV/0!"),
+    ("=AVERAGE()", "#VALUE!"),
     ("=MIN(5,2,8)", "2"),
     ("=MAX(5,2,8)", "8"),
     ("=MIN(-1,-5)", "-5"),
@@ -524,13 +524,13 @@ const CORPUS: &[(&str, &str)] = &[
     (r#"=MIN("3",TRUE)"#, "1"),
     (r#"=MAX(1,"a")"#, "#VALUE!"),
     ("=MIN(1/0,2)", "#DIV/0!"),
-    ("=MIN()", "0"),
-    ("=MAX()", "0"),
+    ("=MIN()", "#VALUE!"),
+    ("=MAX()", "#VALUE!"),
     ("=COUNT(1,2,3)", "3"),
     (r#"=COUNT(1,"a",TRUE)"#, "2"),
     (r#"=COUNT("1","x")"#, "1"),
     ("=COUNT(1/0)", "#DIV/0!"),
-    ("=COUNT()", "0"),
+    ("=COUNT()", "#VALUE!"),
     // --- IF ---
     (r#"=IF(TRUE,"y","n")"#, "y"),
     (r#"=IF(FALSE,"y","n")"#, "n"),
@@ -625,7 +625,7 @@ const CORPUS: &[(&str, &str)] = &[
     ("=CONCAT(1/0)", "#DIV/0!"),
     (r#"=CONCAT("a",NOSUCH(1))"#, "#NAME?"),
     (r#"=CONCAT("")"#, ""),
-    ("=CONCAT()", ""),
+    ("=CONCAT()", "#VALUE!"),
     // --- names are case-insensitive; nesting ---
     ("=sum(1,1)", "2"),
     ("=If(true,1,2)", "1"),
@@ -694,7 +694,7 @@ mod corpus {
         let p = stub();
         CORPUS
             .iter()
-            .map(|(f, _)| ExcelEvaluator::eval_with(f, &p).as_str().into_owned())
+            .map(|(f, _)| ExcelEvaluator::eval_with(f, &p).to_text().into_owned())
             .collect()
     }
 
@@ -818,5 +818,402 @@ mod story6 {
         let elapsed = start.elapsed();
         assert_eq!(v, Value::Number(1.0));
         assert!(elapsed.as_millis() < 500, "took {elapsed:?}");
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Excel evaluator polish (specs/002-excel-evaluator-polish)
+// ---------------------------------------------------------------------------
+
+mod polish_diagnostics {
+    use super::*;
+    use agent_canvas::math::excel::{ParseError, ParseErrorKind};
+
+    fn fail(f: &str) -> ParseError {
+        ExcelEvaluator::try_eval(f).unwrap_err()
+    }
+
+    #[test]
+    fn unterminated_call_reports_eof_with_expected_items() {
+        let e = fail("=SUM(");
+        assert_eq!(e.kind, ParseErrorKind::UnexpectedEof);
+        assert_eq!(e.span, 5..5);
+        assert_eq!(e.expected, vec!["expression", ")"]);
+        assert_eq!(ExcelEvaluator::eval("=SUM("), err(ExcelError::Value));
+    }
+
+    #[test]
+    fn dangling_comma_expects_an_expression() {
+        let e = fail("=SUM(1,");
+        assert_eq!(e.kind, ParseErrorKind::UnexpectedEof);
+        assert_eq!(e.span, 7..7);
+        assert_eq!(e.expected, vec!["expression"]);
+        let e = fail("=IF(");
+        assert_eq!(e.kind, ParseErrorKind::UnexpectedEof);
+        assert_eq!(e.expected, vec!["expression", ")"]);
+    }
+
+    #[test]
+    fn valid_formula_is_ok() {
+        assert_eq!(ExcelEvaluator::try_eval("=1+2"), Ok(Value::Number(3.0)));
+        assert_eq!(ExcelEvaluator::try_eval("1+2"), Ok(Value::Number(3.0)));
+        // Evaluation errors are values, not parse errors.
+        assert_eq!(
+            ExcelEvaluator::try_eval("=1/0"),
+            Ok(err(ExcelError::DivZero))
+        );
+        assert_eq!(
+            ExcelEvaluator::try_eval("=FOO(1)"),
+            Ok(err(ExcelError::Name))
+        );
+    }
+
+    #[test]
+    fn try_eval_with_resolves_references() {
+        assert_eq!(
+            ExcelEvaluator::try_eval_with("=SUM(A1:A3)", &stub()),
+            Ok(Value::Number(2.0)) // text and booleans inside a range are skipped
+        );
+        let e = ExcelEvaluator::try_eval_with("=SUM(A1:A3", &stub()).unwrap_err();
+        assert_eq!(e.kind, ParseErrorKind::UnexpectedEof);
+    }
+
+    #[test]
+    fn infallible_path_maps_every_failure_to_value_error() {
+        for f in ["=SUM(", "=SUM(1,", "=IF(", "=1 2", "=", "", "=1+", "=#"] {
+            assert_eq!(ExcelEvaluator::eval(f), err(ExcelError::Value), "{f:?}");
+            assert!(ExcelEvaluator::try_eval(f).is_err(), "{f:?}");
+        }
+    }
+
+    #[test]
+    fn empty_and_bare_equals_never_panic() {
+        for f in ["", "=", " ", "= ", "\u{200B}"] {
+            let e = fail(f);
+            assert_eq!(e.kind, ParseErrorKind::UnexpectedEof, "{f:?}");
+            assert_eq!(e.span, f.len()..f.len(), "{f:?}");
+            assert_eq!(ExcelEvaluator::eval(f), err(ExcelError::Value));
+        }
+    }
+
+    #[test]
+    fn limits_are_limit_exceeded() {
+        let long = format!("{}1", "1+".repeat(4096)); // 8193 chars
+        assert_eq!(long.chars().count(), 8193);
+        assert_eq!(fail(&long).kind, ParseErrorKind::LimitExceeded);
+        assert_eq!(ExcelEvaluator::eval(&long), err(ExcelError::Value));
+        let deep = format!("={}1{}", "(".repeat(65), ")".repeat(65));
+        assert_eq!(fail(&deep).kind, ParseErrorKind::LimitExceeded);
+        assert_eq!(ExcelEvaluator::eval(&deep), err(ExcelError::Value));
+        let ok = format!("={}1{}", "(".repeat(64), ")".repeat(64));
+        assert_eq!(ExcelEvaluator::try_eval(&ok), Ok(Value::Number(1.0)));
+        let at_limit = format!("{}1", "1+".repeat(4095)); // 8191 chars
+        assert!(at_limit.chars().count() <= 8192);
+        assert!(ExcelEvaluator::try_eval(&at_limit).is_ok());
+    }
+
+    #[test]
+    fn stray_token_reports_its_span() {
+        let e = fail("=1 2");
+        assert_eq!(e.kind, ParseErrorKind::UnexpectedToken);
+        assert_eq!(e.span, 3..4);
+        let e = fail("=1 # 2");
+        assert_eq!(e.kind, ParseErrorKind::UnexpectedToken);
+        assert_eq!(e.span, 3..4);
+        let e = fail("=SUM(1 2)");
+        assert_eq!(e.kind, ParseErrorKind::UnexpectedToken);
+        assert_eq!(e.span, 7..8);
+        assert_eq!(e.expected, vec![",", ")"]);
+    }
+
+    #[test]
+    fn offsets_refer_to_the_original_string() {
+        // Leading whitespace and an invisible BOM (3 bytes) before the `=`.
+        let e = fail("  \u{FEFF}=1 2");
+        assert_eq!(e.span, 8..9);
+        // Invisible code point between tokens.
+        let e = fail("1\u{200B} #");
+        assert_eq!(e.span, 5..6);
+        // Multi-byte text before the error.
+        let e = fail("=\"é\"+#");
+        assert_eq!(e.span, 6..7);
+        // End of input is the end of the original string, trailing junk included.
+        let f = "=SUM(\u{200B} ";
+        let e = fail(f);
+        assert_eq!(e.span, f.len()..f.len());
+    }
+
+    #[test]
+    fn display_contains_kind_position_and_expected() {
+        assert_eq!(
+            fail("=SUM(").to_string(),
+            "unexpected end of input at 5, expected expression or )"
+        );
+        assert_eq!(fail("=1 2").to_string(), "unexpected token at 3");
+    }
+
+    #[test]
+    fn parse_error_is_a_std_error() {
+        fn is_error<T: std::error::Error + Send + Sync + 'static>() {}
+        is_error::<ParseError>();
+        let boxed: Box<dyn std::error::Error> = Box::new(fail("=("));
+        assert!(boxed.to_string().contains("unexpected end of input"));
+    }
+}
+
+mod polish_as_str {
+    use super::*;
+
+    #[test]
+    fn issue_9_scenario() {
+        let v = ExcelEvaluator::eval(r#"=IF(SUM(10,20)>25,"Profit","Loss")"#);
+        assert_eq!(v.as_str(), Some("Profit"));
+        let two = ExcelEvaluator::eval("=1+1");
+        assert_eq!(two.as_str(), None);
+        assert_eq!(two.to_text(), "2");
+        assert_eq!(two.to_string(), "2");
+    }
+
+    #[test]
+    fn as_str_is_none_for_non_text() {
+        for f in ["=TRUE", "=1/0", "=FOO(1)", "=1"] {
+            assert_eq!(ExcelEvaluator::eval(f).as_str(), None, "{f}");
+        }
+    }
+}
+
+/// Provider for blank-cell scenarios: `A1` is empty, `A2` holds an explicit Blank.
+struct Blanks;
+
+impl RangeProvider for Blanks {
+    fn resolve(&self, reference: &str) -> Option<Vec<Cell>> {
+        match reference {
+            "A1" => Some(vec![Cell::Empty]),
+            "A2" => Some(vec![Cell::Value(Value::Blank)]),
+            "A3" => Some(vec![n(7.0)]),
+            "B1:B3" => Some(vec![Cell::Empty, Cell::Empty, Cell::Empty]),
+            "B4:B6" => Some(vec![Cell::Empty, Cell::Value(Value::Blank), n(4.0)]),
+            "C1:C3" => Some(vec![t("x"), t("y"), t("z")]),
+            "D1:D2" => Some(vec![Cell::Value(Value::Blank), Cell::Value(Value::Blank)]),
+            "E1:E2" => Some(vec![Cell::Empty, t("a")]),
+            _ => None,
+        }
+    }
+}
+
+fn bl(formula: &str) -> Value {
+    ExcelEvaluator::eval_with(formula, &Blanks)
+}
+
+mod polish_blank {
+    use super::*;
+
+    #[test]
+    fn acceptance_scenarios() {
+        assert_eq!(bl("=A1=0"), Value::Bool(true));
+        assert_eq!(bl(r#"=A1="""#), Value::Bool(true));
+        assert_eq!(bl(r#"=A1&"x""#), Value::Text("x".into()));
+        assert_eq!(bl("=A1+1"), Value::Number(1.0));
+        assert_eq!(bl("=A1<1"), Value::Bool(true));
+        assert_eq!(bl("=A1"), Value::Blank);
+        let v = bl("=A1");
+        assert_eq!(v.to_text(), "0");
+        assert_eq!(v.to_string(), "0");
+        assert_eq!(v.as_str(), None);
+    }
+
+    #[test]
+    fn explicit_blank_value_behaves_like_empty() {
+        for f in ["=A2=0", r#"=A2="""#, "=A2<1", "=A1=A2"] {
+            assert_eq!(bl(f), Value::Bool(true), "{f}");
+        }
+        assert_eq!(bl("=A2"), Value::Blank);
+        assert_eq!(bl("=A2+1"), Value::Number(1.0));
+    }
+
+    #[test]
+    fn blank_compares_with_blank_and_other_types() {
+        assert_eq!(bl("=A1=A1"), Value::Bool(true));
+        assert_eq!(bl("=A1<>A1"), Value::Bool(false));
+        assert_eq!(bl("=A1=FALSE"), Value::Bool(true));
+        assert_eq!(bl("=A1<TRUE"), Value::Bool(true));
+        assert_eq!(bl("=A1>-1"), Value::Bool(true));
+        assert_eq!(bl("=A1<A3"), Value::Bool(true));
+        assert_eq!(bl(r#"=A1<"a""#), Value::Bool(true));
+        assert_eq!(bl(r#"=A1>"""#), Value::Bool(false));
+        assert_eq!(bl("=A1<>0"), Value::Bool(false));
+    }
+
+    #[test]
+    fn blank_in_logic() {
+        assert_eq!(bl("=IF(A1,1,2)"), Value::Number(2.0));
+        assert_eq!(bl("=AND(A1)"), Value::Bool(false));
+        assert_eq!(bl("=OR(A1)"), Value::Bool(false));
+        assert_eq!(bl("=NOT(A1)"), Value::Bool(true));
+        assert_eq!(bl("=AND(TRUE,A1)"), Value::Bool(false));
+        assert_eq!(bl("=OR(FALSE,A1)"), Value::Bool(false));
+    }
+
+    #[test]
+    fn blank_in_functions() {
+        assert_eq!(bl("=ROUND(A1,0)"), Value::Number(0.0));
+        assert_eq!(bl("=ABS(A1)"), Value::Number(0.0));
+        assert_eq!(bl(r#"=CONCAT(A1,"x")"#), Value::Text("x".into()));
+        assert_eq!(bl("=IFERROR(A1,5)"), Value::Blank);
+        assert_eq!(bl("=-A1"), Value::Number(0.0));
+        assert_eq!(bl("=A1%"), Value::Number(0.0));
+        assert_eq!(bl("=+A1"), Value::Blank);
+        assert_eq!(bl("=A1*5"), Value::Number(0.0));
+        assert_eq!(bl("=A1^2"), Value::Number(0.0));
+        assert_eq!(bl("=A1&A1"), Value::Text(String::new()));
+    }
+
+    #[test]
+    fn error_operand_dominates() {
+        assert_eq!(bl("=A1+1/0"), err(ExcelError::DivZero));
+        assert_eq!(bl("=A1=1/0"), err(ExcelError::DivZero));
+        assert_eq!(bl("=A1&(1/0)"), err(ExcelError::DivZero));
+    }
+
+    #[test]
+    fn ranges_still_skip_empty_cells() {
+        assert_eq!(bl("=SUM(B4:B6)"), Value::Number(4.0));
+        assert_eq!(bl("=COUNT(B4:B6)"), Value::Number(1.0));
+        assert_eq!(bl("=AVERAGE(B4:B6)"), Value::Number(4.0));
+        assert_eq!(bl("=CONCAT(E1:E2)"), Value::Text("a".into()));
+        assert_eq!(bl("=AND(B4:B6)"), Value::Bool(true));
+    }
+}
+
+mod polish_empty_ranges {
+    use super::*;
+
+    #[test]
+    fn ranges_with_no_numbers() {
+        for range in ["B1:B3", "C1:C3", "D1:D2"] {
+            assert_eq!(
+                bl(&format!("=AVERAGE({range})")),
+                err(ExcelError::DivZero),
+                "{range}"
+            );
+            assert_eq!(bl(&format!("=MAX({range})")), Value::Number(0.0), "{range}");
+            assert_eq!(bl(&format!("=MIN({range})")), Value::Number(0.0), "{range}");
+            assert_eq!(bl(&format!("=SUM({range})")), Value::Number(0.0), "{range}");
+            assert_eq!(
+                bl(&format!("=COUNT({range})")),
+                Value::Number(0.0),
+                "{range}"
+            );
+        }
+    }
+}
+
+mod polish_arity {
+    use super::*;
+    use agent_canvas::math::excel::ParseErrorKind;
+
+    fn call(name: &str, args: usize) -> String {
+        format!("={name}({})", vec!["1"; args].join(","))
+    }
+
+    fn arity_err(f: &str) -> ParseErrorKind {
+        ExcelEvaluator::try_eval(f).unwrap_err().kind
+    }
+
+    fn wrong(name: &str, min: usize, max: Option<usize>, got: usize) -> ParseErrorKind {
+        ParseErrorKind::WrongArgCount {
+            name: name.into(),
+            min,
+            max,
+            got,
+        }
+    }
+
+    #[test]
+    fn boundary_table_for_every_function() {
+        for name in [
+            "SUM", "AVERAGE", "MIN", "MAX", "COUNT", "AND", "OR", "CONCAT",
+        ] {
+            assert_eq!(arity_err(&call(name, 0)), wrong(name, 1, None, 0), "{name}");
+            assert!(ExcelEvaluator::try_eval(&call(name, 1)).is_ok(), "{name}");
+            assert!(ExcelEvaluator::try_eval(&call(name, 5)).is_ok(), "{name}");
+        }
+        for (min, max, name) in [(2, 3, "IF"), (2, 2, "ROUND"), (2, 2, "IFERROR")] {
+            for got in [0, 1, 4] {
+                if got < min || got > max {
+                    assert_eq!(
+                        arity_err(&call(name, got)),
+                        wrong(name, min, Some(max), got),
+                        "{name} {got}"
+                    );
+                }
+            }
+            for got in min..=max {
+                assert!(
+                    ExcelEvaluator::try_eval(&call(name, got)).is_ok(),
+                    "{name} {got}"
+                );
+            }
+        }
+        for name in ["NOT", "ABS"] {
+            for got in [0, 2] {
+                assert_eq!(
+                    arity_err(&call(name, got)),
+                    wrong(name, 1, Some(1), got),
+                    "{name} {got}"
+                );
+            }
+            assert!(ExcelEvaluator::try_eval(&call(name, 1)).is_ok(), "{name}");
+        }
+    }
+
+    #[test]
+    fn name_is_canonical_uppercase_and_case_insensitive() {
+        assert_eq!(arity_err("=sum()"), wrong("SUM", 1, None, 0));
+        assert_eq!(arity_err("=If(1)"), wrong("IF", 2, Some(3), 1));
+    }
+
+    #[test]
+    fn span_covers_the_call() {
+        let e = ExcelEvaluator::try_eval("=SUM()").unwrap_err();
+        assert_eq!(e.span, 1..6);
+        assert!(e.expected.is_empty());
+        let e = ExcelEvaluator::try_eval("=SUM(1,ROUND(2))").unwrap_err();
+        assert_eq!(e.span, 7..15);
+        assert_eq!(e.kind, wrong("ROUND", 2, Some(2), 1));
+    }
+
+    #[test]
+    fn unevaluated_branches_and_nested_calls_are_checked() {
+        assert_eq!(
+            arity_err("=IF(TRUE,1,ROUND(1))"),
+            wrong("ROUND", 2, Some(2), 1)
+        );
+        assert_eq!(arity_err("=SUM(1,ROUND(2))"), wrong("ROUND", 2, Some(2), 1));
+        assert_eq!(arity_err("=IFERROR(1,MAX())"), wrong("MAX", 1, None, 0));
+    }
+
+    #[test]
+    fn unknown_functions_still_evaluate_to_name_error() {
+        assert_eq!(
+            ExcelEvaluator::try_eval("=FOO()"),
+            Ok(err(ExcelError::Name))
+        );
+        assert_eq!(ExcelEvaluator::eval("=FOO()"), err(ExcelError::Name));
+        assert_eq!(ExcelEvaluator::eval("=RAND(1,2,3)"), err(ExcelError::Name));
+    }
+
+    #[test]
+    fn infallible_path_gives_value_error_for_every_violation() {
+        for name in [
+            "SUM", "AVERAGE", "MIN", "MAX", "COUNT", "AND", "OR", "CONCAT",
+        ] {
+            assert_eq!(ExcelEvaluator::eval(&call(name, 0)), err(ExcelError::Value));
+        }
+        assert_eq!(ExcelEvaluator::eval("=IF(1)"), err(ExcelError::Value));
+        assert_eq!(ExcelEvaluator::eval("=IF(1,2,3,4)"), err(ExcelError::Value));
+        assert_eq!(ExcelEvaluator::eval("=ROUND(1)"), err(ExcelError::Value));
+        assert_eq!(ExcelEvaluator::eval("=NOT(1,2)"), err(ExcelError::Value));
+        assert_eq!(ExcelEvaluator::eval("=ABS()"), err(ExcelError::Value));
     }
 }

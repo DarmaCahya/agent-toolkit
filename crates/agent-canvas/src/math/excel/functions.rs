@@ -3,16 +3,19 @@
 
 use super::eval::{eval_arg, eval_expr, ipow, Arg, Ctx};
 use super::parser::Expr;
-use super::value::{finite_or_num, parse_number_text, to_number, to_text, Cell, ExcelError, Value};
+use super::value::{
+    coerce_logical, coerce_text, finite_or_num, to_number, Cell, ExcelError, Value,
+};
 
-/// `(min, max)` argument counts, or `None` for names outside the Phase-1 set.
+/// `(min, max)` argument counts (case-insensitive name), or `None` for names outside the
+/// Phase-1 set. Variadic functions need at least one argument; their max is `usize::MAX`.
 pub(crate) fn arity(name: &str) -> Option<(usize, usize)> {
-    match name {
+    match name.to_ascii_uppercase().as_str() {
         "NOT" | "ABS" => Some((1, 1)),
         "ROUND" | "IFERROR" => Some((2, 2)),
         "IF" => Some((2, 3)),
         "SUM" | "AVERAGE" | "MIN" | "MAX" | "COUNT" | "AND" | "OR" | "CONCAT" => {
-            Some((0, usize::MAX))
+            Some((1, usize::MAX))
         }
         _ => None,
     }
@@ -47,17 +50,6 @@ pub(crate) fn call(name: &str, args: &[Expr], ctx: &mut Ctx<'_>) -> Value {
     }
 }
 
-fn to_logical(v: &Value) -> Result<bool, ExcelError> {
-    match v {
-        Value::Bool(b) => Ok(*b),
-        Value::Number(x) => Ok(*x != 0.0),
-        Value::Text(s) => parse_number_text(s)
-            .map(|x| x != 0.0)
-            .ok_or(ExcelError::Value),
-        Value::Error(e) => Err(*e),
-    }
-}
-
 /// `IF` takes a boolean or numeric condition; text (even numeric text) is `#VALUE!`.
 fn if_fn(args: &[Expr], ctx: &mut Ctx<'_>) -> Value {
     let (Some(cond), Some(then)) = (args.first(), args.get(1)) else {
@@ -68,6 +60,7 @@ fn if_fn(args: &[Expr], ctx: &mut Ctx<'_>) -> Value {
         Value::Number(x) => x != 0.0,
         Value::Text(_) => return value_error(),
         Value::Error(e) => return Value::Error(e),
+        Value::Blank => false,
     };
     if truth {
         eval_expr(then, ctx)
@@ -93,7 +86,7 @@ fn unary_fn(name: &str, args: &[Expr], ctx: &mut Ctx<'_>) -> Value {
     };
     let v = eval_expr(arg, ctx);
     if name == "NOT" {
-        return match to_logical(&v) {
+        return match coerce_logical(&v) {
             Ok(b) => Value::Bool(!b),
             Err(e) => Value::Error(e),
         };
@@ -224,10 +217,16 @@ fn logical(is_and: bool, args: &[Arg]) -> Value {
     };
     for arg in args {
         match arg {
-            Arg::Scalar(v) => match to_logical(v) {
+            Arg::Scalar(v) => match coerce_logical(v) {
                 Ok(b) => fold(b),
                 Err(e) => return Value::Error(e),
             },
+            // A single reference to an empty cell is a blank scalar, which reads as FALSE.
+            Arg::Range(cells)
+                if matches!(cells.as_slice(), [Cell::Empty | Cell::Value(Value::Blank)]) =>
+            {
+                fold(false);
+            }
             Arg::Range(cells) => {
                 for cell in cells {
                     match cell {
@@ -251,14 +250,14 @@ fn concat(args: &[Arg]) -> Value {
     let mut out = String::new();
     for arg in args {
         match arg {
-            Arg::Scalar(v) => match to_text(v) {
+            Arg::Scalar(v) => match coerce_text(v) {
                 Ok(s) => out.push_str(&s),
                 Err(e) => return Value::Error(e),
             },
             Arg::Range(cells) => {
                 for cell in cells {
                     if let Cell::Value(v) = cell {
-                        match to_text(v) {
+                        match coerce_text(v) {
                             Ok(s) => out.push_str(&s),
                             Err(e) => return Value::Error(e),
                         }
@@ -294,9 +293,12 @@ mod tests {
         for variadic in [
             "SUM", "AVERAGE", "MIN", "MAX", "COUNT", "AND", "OR", "CONCAT",
         ] {
-            assert_eq!(arity(variadic), Some((0, usize::MAX)), "{variadic}");
+            assert_eq!(arity(variadic), Some((1, usize::MAX)), "{variadic}");
         }
-        for unknown in ["NOW", "RAND", "TODAY", "VLOOKUP", "", "sum"] {
+        // Lookup is case-insensitive.
+        assert_eq!(arity("sum"), Some((1, usize::MAX)));
+        assert_eq!(arity("If"), Some((2, 3)));
+        for unknown in ["NOW", "RAND", "TODAY", "VLOOKUP", ""] {
             assert_eq!(arity(unknown), None, "{unknown}");
         }
     }
@@ -311,6 +313,21 @@ mod tests {
         assert_eq!(logical(true, &[]), Value::Error(ExcelError::Value));
         assert_eq!(logical(false, &[]), Value::Error(ExcelError::Value));
         assert_eq!(concat(&[]), Value::Text(String::new()));
+    }
+
+    #[test]
+    fn runtime_guard_rejects_zero_arg_variadics() {
+        // Parse-time validation is the primary check; the runtime guard is defence in depth.
+        let mut ctx = Ctx::new(None);
+        for name in [
+            "SUM", "AVERAGE", "MIN", "MAX", "COUNT", "AND", "OR", "CONCAT",
+        ] {
+            assert_eq!(
+                call(name, &[], &mut ctx),
+                Value::Error(ExcelError::Value),
+                "{name}"
+            );
+        }
     }
 
     #[test]

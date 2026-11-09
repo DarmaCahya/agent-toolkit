@@ -38,14 +38,11 @@ fn main() {
         "=1+",
     ];
     for f in formulas {
-        println!("{f:<45} -> {}", ExcelEvaluator::eval(f).as_str());
+        println!("{f:<45} -> {}", ExcelEvaluator::eval(f));
     }
 
     println!("--- with a range provider ---");
     for f in ["=SUM(A1:A3)", "=COUNT(A1:A3)", "=SUM(\"3\",A1:A3)", "=B1"] {
-        println!(
-            "{f:<45} -> {}",
-            ExcelEvaluator::eval_with(f, &Sheet).as_str()
-        );
+        println!("{f:<45} -> {}", ExcelEvaluator::eval_with(f, &Sheet));
     }
 }
