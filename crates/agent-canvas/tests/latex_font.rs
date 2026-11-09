@@ -95,6 +95,81 @@ fn italic_correction_exists() {
     assert!(any, "no italic correction for any required glyph");
 }
 
+// ---- Glyph assembly and MathKern data (spec 004, task T003) ----
+
+fn stretchy_chars() -> Vec<char> {
+    vec!['√', '(', ')', '[', ']', '{', '}', '|', '∫']
+}
+
+#[test]
+fn stretchy_glyphs_have_vertical_assembly() {
+    let f = face();
+    let variants = f.tables().math.unwrap().variants.expect("MathVariants");
+    for c in stretchy_chars() {
+        let gid = f.glyph_index(c).unwrap_or_else(|| panic!("no glyph {c}"));
+        let cons = variants
+            .vertical_constructions
+            .get(gid)
+            .unwrap_or_else(|| panic!("no vertical construction for {c}"));
+        let asm = cons
+            .assembly
+            .unwrap_or_else(|| panic!("no assembly for {c}"));
+        assert!(asm.parts.into_iter().count() > 0, "empty assembly for {c}");
+    }
+}
+
+#[test]
+fn assembly_and_variant_glyphs_are_retained() {
+    let f = face();
+    let variants = f.tables().math.unwrap().variants.expect("MathVariants");
+    let count = f.number_of_glyphs();
+    for c in stretchy_chars() {
+        let gid = f.glyph_index(c).unwrap();
+        let cons = variants.vertical_constructions.get(gid).unwrap();
+        for v in cons.variants {
+            assert!(
+                v.variant_glyph.0 < count && f.glyph_bounding_box(v.variant_glyph).is_some(),
+                "variant glyph {} of {c} missing",
+                v.variant_glyph.0
+            );
+        }
+        for p in cons.assembly.unwrap().parts {
+            assert!(
+                p.glyph_id.0 < count && f.glyph_bounding_box(p.glyph_id).is_some(),
+                "assembly part {} of {c} has no outline",
+                p.glyph_id.0
+            );
+        }
+    }
+}
+
+#[test]
+fn some_retained_glyph_has_corner_kerns() {
+    let f = face();
+    let infos = f
+        .tables()
+        .math
+        .unwrap()
+        .glyph_info
+        .expect("glyph info")
+        .kern_infos
+        .expect("kern infos");
+    let (mut top, mut bottom) = (false, false);
+    for gid in (0..f.number_of_glyphs()).map(GlyphId) {
+        if let Some(k) = infos.get(gid) {
+            top |= k.top_right.is_some();
+            bottom |= k.bottom_right.is_some();
+        }
+    }
+    assert!(top, "no TopRight kern data retained");
+    assert!(bottom, "no BottomRight kern data retained");
+}
+
+#[test]
+fn subset_stays_small_with_assembly_data() {
+    assert!(FONT.len() < 250_000, "font is {} bytes", FONT.len());
+}
+
 #[test]
 fn licence_and_notices_present() {
     let ofl = std::fs::read_to_string(concat!(

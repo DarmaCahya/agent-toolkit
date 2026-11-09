@@ -201,29 +201,84 @@ fn integral_keeps_side_scripts_in_display_style() {
 }
 
 #[test]
-fn very_tall_radicand_is_stretched_not_clipped() {
+fn sqrt_nested_fractions() {
     let formula = format!(r"\sqrt{{{}a{}}}", r"\frac{".repeat(12), r"}{b}".repeat(12));
     let t = MathTypesetter::new();
     let b = t.layout_metrics(&formula).unwrap();
-    let stretched = b
-        .items
-        .iter()
-        .find(|i| i.kind == ItemKind::ScaledGlyph)
-        .expect("radical drawn with a vertical stretch");
-    assert!(stretched.sy > stretched.sx);
-    let content = t
-        .layout_metrics(&formula[r"\sqrt{".len()..formula.len() - 1])
-        .unwrap();
-    assert!(b.height >= content.height && b.depth >= content.depth);
+    let f = facts('x');
+
+    // Assembled from ordinary glyphs: nothing is distorted (SC-001).
+    assert!(
+        !b.items.iter().any(|i| i.kind == ItemKind::ScaledGlyph),
+        "radical must not be a vertically scaled glyph"
+    );
     let svg = t.render_to_svg(&formula).unwrap();
     assert!(
-        svg.lines().any(|l| {
+        !svg.lines().any(|l| {
             l.split("scale(")
                 .nth(1)
                 .is_some_and(|s| s.split(')').next().unwrap().contains(' '))
         }),
-        "non-uniform scale in SVG"
+        "no non-uniform scale in SVG"
     );
+
+    // The radical is the leftmost column of glyphs (no index): x == 0, listed
+    // bottom to top, more than one piece.
+    let parts: Vec<ItemMetrics> = glyphs(&b).into_iter().filter(|g| g.x == 0.0).collect();
+    assert!(
+        parts.len() >= 3,
+        "expected assembled parts, got {}",
+        parts.len()
+    );
+    assert!(
+        parts.windows(2).all(|w| w[0].y < w[1].y),
+        "parts must be ordered bottom to top"
+    );
+    assert!(parts.iter().all(|p| p.sx == p.sy), "uniform scale");
+
+    // Radical covers the radicand plus gap (SC-002).
+    let content = t
+        .layout_metrics(&formula[r"\sqrt{".len()..formula.len() - 1])
+        .unwrap();
+    assert!(b.height >= content.height && b.depth >= content.depth);
+    assert!(
+        b.height + b.depth
+            >= content.height + content.depth + f.radical_display_vertical_gap - 1e-9
+    );
+
+    // Deterministic (SC-004).
+    for _ in 0..10 {
+        assert_eq!(t.render_to_svg(&formula).unwrap(), svg);
+    }
+}
+
+/// Horizontal gap between a nucleus' kern-ignored script origin and the real one.
+fn script_kern(nucleus: char, script_marker: &str) -> f64 {
+    let b = glyphs(&m(&format!("{nucleus}{script_marker}2")));
+    let f = facts(nucleus);
+    match script_marker {
+        "^" => b[1].x - (b[0].w + f.italic_correction),
+        _ => b[1].x - b[0].w,
+    }
+}
+
+#[test]
+fn mathkern_shifts_scripts_only_on_kerned_nuclei() {
+    // `=` carries no corner kerns in the font: placement is the classic one.
+    assert_eq!(script_kern('=', "^"), 0.0);
+    assert_eq!(script_kern('=', "_"), 0.0);
+    // Some letters do carry kerns, in at least one direction, and the shift
+    // stays a small fraction of an em.
+    let mut sup_shifted = false;
+    let mut sub_shifted = false;
+    for c in ('a'..='z').chain('A'..='Z') {
+        let (up, down) = (script_kern(c, "^"), script_kern(c, "_"));
+        assert!(up.abs() < 0.5 && down.abs() < 0.5, "{c}: {up} {down}");
+        sup_shifted |= up != 0.0;
+        sub_shifted |= down != 0.0;
+    }
+    assert!(sup_shifted, "no superscript was kerned");
+    assert!(sub_shifted, "no subscript was kerned");
 }
 
 /// Golden extents for the quadratic formula, in em.

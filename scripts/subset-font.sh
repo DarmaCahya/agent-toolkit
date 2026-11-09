@@ -18,9 +18,10 @@ if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
   exit 1
 fi
 
-# Code points: ASCII digits/symbols, math italic Latin (+ U+210E), math italic
-# lowercase Greek, upright uppercase Greek, operators and big operators.
-UNICODES="0030-0039,0028,0029,002B,002C,003C,003D,003E,2212,00B1,00B7,00D7,2264,2265,2260,221E,221A,2211,222B,220F,210E,1D434-1D467,1D6FC-1D714,0391-0393,0394,0395-03A9"
+# Code points: ASCII digits/symbols and stretchy delimiters ( ) [ ] { } |,
+# math italic Latin (+ U+210E), math italic lowercase Greek, upright uppercase
+# Greek, operators and big operators.
+UNICODES="0030-0039,0028,0029,005B,005D,007B,007D,007C,002B,002C,003C,003D,003E,2212,00B1,00B7,00D7,2264,2265,2260,221E,221A,2211,222B,220F,210E,1D434-1D467,1D6FC-1D714,0391-0393,0394,0395-03A9"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -57,6 +58,20 @@ for rec in list(name.names):
     elif "STIX" in rec.toUnicode():
         name.removeNames(nameID=rec.nameID, platformID=rec.platformID,
                          platEncID=rec.platEncID, langID=rec.langID)
+# Closure check: every vertical variant and assembly part referenced by a
+# retained construction must itself be retained, or stretchy glyphs would
+# silently lose pieces at runtime.
+order = set(f.getGlyphOrder())
+variants = f["MATH"].table.MathVariants
+missing = []
+for base, cons in zip(variants.VertGlyphCoverage.glyphs, variants.VertGlyphConstruction):
+    ids = [v.VariantGlyph for v in (cons.MathGlyphVariantRecord or [])]
+    if cons.GlyphAssembly:
+        ids += [p.glyph for p in cons.GlyphAssembly.PartRecords]
+    missing += [(base, g) for g in ids if g not in order]
+if missing:
+    sys.exit(f"error: subset dropped MATH glyphs: {missing[:5]}")
+print(f"closure ok: {len(variants.VertGlyphCoverage.glyphs)} vertical constructions", file=sys.stderr)
 # Constant timestamps (2021-04-02, Mac epoch) for reproducible output.
 f["head"].created = 3700166400
 f["head"].modified = 3700166400
