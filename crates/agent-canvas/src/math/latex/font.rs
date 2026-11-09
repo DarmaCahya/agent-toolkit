@@ -61,6 +61,59 @@ pub(crate) struct GlyphBox {
     pub y_max: f64,
 }
 
+/// One piece of a glyph assembly; lengths in em.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct AssemblyPart {
+    pub gid: GlyphId,
+    pub start_connector: f64,
+    pub end_connector: f64,
+    pub advance: f64,
+    pub extender: bool,
+}
+
+/// Vertical glyph assembly, parts ordered bottom to top; lengths in em.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct Assembly {
+    /// Never empty; every part has `advance > 0`.
+    pub parts: Vec<AssemblyPart>,
+    pub min_overlap: f64,
+}
+
+/// Which right-hand corner of a nucleus a script attaches to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Corner {
+    TopRight,
+    BottomRight,
+}
+
+/// MathKern staircase for one corner, in em. `kerns` has one more entry than
+/// `heights` (OpenType MathKern), or exactly one when `heights` is empty.
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct CornerKern {
+    pub heights: Vec<f64>,
+    pub kerns: Vec<f64>,
+}
+
+impl CornerKern {
+    /// Kern for a correction height `h` (em): the entry just above the first
+    /// correction height greater than `h`, else the last. NaN gives 0.
+    pub(crate) fn at(&self, h: f64) -> f64 {
+        if h.is_nan() {
+            return 0.0;
+        }
+        let i = self
+            .heights
+            .iter()
+            .position(|&c| h < c)
+            .unwrap_or(self.heights.len());
+        self.kerns
+            .get(i)
+            .or_else(|| self.kerns.last())
+            .copied()
+            .unwrap_or(0.0)
+    }
+}
+
 /// The bundled font.
 pub(crate) struct MathFont {
     face: Face<'static>,
@@ -160,6 +213,56 @@ impl MathFont {
         }
         out.sort_by(|a, b| a.1.total_cmp(&b.1).then(a.0 .0.cmp(&b.0 .0)));
         out
+    }
+
+    /// Vertical glyph assembly for `gid`, or `None` when the font has no
+    /// construction, no assembly, or no usable part.
+    pub(crate) fn assembly(&self, gid: GlyphId) -> Option<Assembly> {
+        let variants = self.face.tables().math?.variants?;
+        let asm = variants.vertical_constructions.get(gid)?.assembly?;
+        let u = self.upem();
+        let parts: Vec<AssemblyPart> = asm
+            .parts
+            .into_iter()
+            .filter(|p| p.full_advance > 0)
+            .map(|p| AssemblyPart {
+                gid: p.glyph_id,
+                start_connector: f64::from(p.start_connector_length) / u,
+                end_connector: f64::from(p.end_connector_length) / u,
+                advance: f64::from(p.full_advance) / u,
+                extender: p.part_flags.extender(),
+            })
+            .collect();
+        if parts.is_empty() {
+            return None;
+        }
+        Some(Assembly {
+            parts,
+            min_overlap: f64::from(variants.min_connector_overlap) / u,
+        })
+    }
+
+    /// MathKern staircase of `gid` at `corner`, or `None` when absent/empty.
+    pub(crate) fn corner_kern(&self, gid: GlyphId, corner: Corner) -> Option<CornerKern> {
+        let info = self.face.tables().math?.glyph_info?.kern_infos?.get(gid)?;
+        let kern = match corner {
+            Corner::TopRight => info.top_right,
+            Corner::BottomRight => info.bottom_right,
+        }?;
+        let u = self.upem();
+        let n = kern.count();
+        let heights: Vec<f64> = (0..n)
+            .filter_map(|i| kern.height(i))
+            .map(|v| f64::from(v.value) / u)
+            .collect();
+        let kerns: Vec<f64> = (0..=n)
+            .filter_map(|i| kern.kern(i))
+            .map(|v| f64::from(v.value) / u)
+            .collect();
+        if kerns.is_empty() {
+            return None;
+        }
+        Some(CornerKern { heights, kerns })
     }
 
     /// Display-style variant of a big operator: the smallest variant at least
@@ -352,6 +455,58 @@ mod tests {
         assert!(b.y_max - b.y_min > 1.0);
         let b0 = f.bbox(sum).unwrap();
         assert!(b.y_max - b.y_min >= b0.y_max - b0.y_min);
+    }
+
+    #[test]
+    fn corner_kern_at_staircase() {
+        let k = CornerKern {
+            heights: vec![10.0, 20.0],
+            kerns: vec![1.0, 2.0, 3.0],
+        };
+        assert_eq!(k.at(5.0), 1.0);
+        assert_eq!(k.at(10.0), 2.0);
+        assert_eq!(k.at(15.0), 2.0);
+        assert_eq!(k.at(20.0), 3.0);
+        assert_eq!(k.at(99.0), 3.0);
+        assert_eq!(k.at(f64::INFINITY), 3.0);
+        assert_eq!(k.at(f64::NEG_INFINITY), 1.0);
+        assert_eq!(k.at(f64::NAN), 0.0);
+        let flat = CornerKern {
+            heights: vec![],
+            kerns: vec![0.5],
+        };
+        assert_eq!(flat.at(1.0), 0.5);
+        assert_eq!(flat.at(f64::NAN), 0.0);
+    }
+
+    #[test]
+    fn stretchy_glyphs_expose_assembly() {
+        let f = MathFont::load().unwrap();
+        for c in ['√', '(', ')', '[', ']', '{', '}', '|', '∫'] {
+            let gid = f.glyph(c).unwrap();
+            let a = f.assembly(gid).unwrap_or_else(|| panic!("no assembly {c}"));
+            assert!(!a.parts.is_empty());
+            assert!(a.min_overlap >= 0.0);
+            for p in &a.parts {
+                assert!(p.advance > 0.0);
+                assert!(f.bbox(p.gid).is_some(), "part of {c} missing from subset");
+            }
+        }
+        // A plain letter has no construction.
+        assert!(f.assembly(f.glyph('0').unwrap()).is_none());
+    }
+
+    #[test]
+    fn some_glyph_has_corner_kern_data() {
+        let f = MathFont::load().unwrap();
+        let n = f.face.number_of_glyphs();
+        let found = (0..n).map(GlyphId).find_map(|g| {
+            f.corner_kern(g, Corner::TopRight)
+                .zip(f.corner_kern(g, Corner::BottomRight))
+        });
+        let (tr, br) = found.expect("a glyph with both kern corners");
+        assert_eq!(tr.kerns.len(), tr.heights.len() + 1);
+        assert!(!br.kerns.is_empty());
     }
 
     #[test]
