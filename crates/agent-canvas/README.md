@@ -14,6 +14,7 @@ Zero external runtime dependencies (no Node.js, no Chromium, no Python).
 3. **Math & Formulae (`math`)**: LaTeX math formula typesetting to SVG path curves + Pure-Rust Excel formula evaluator (`=SUM`, `=IF`, etc.).
    - **LaTeX → SVG**: `MathTypesetter::render_to_svg(r"\frac{-b \pm \sqrt{b^2 - 4ac}}{2a}")` returns a deterministic, vector-only SVG (glyph outlines, no `<text>`/fonts/scripts) typeset with TeX layout rules and OpenType MATH metrics from a bundled STIX Two Math subset.
    - **v1 grammar**: letters, digits, `+ - = < > ( ) ,`, `^`/`_`, `{}` groups, `\frac`, `\sqrt[n]{}`, `\sum \int \prod`, Greek letters, `\pm \cdot \times \leq \geq \neq \infty`. Limits: 8192 chars, nesting depth 64. Out of scope: `\left/\right`, `\text`, matrices, accents, font/style commands, macros (errors carry a position and hint).
+   - **Explicit spacing**: `\,` (3mu), `\:` (4mu), `\;` (5mu), `\!` (-3mu), `\quad` (1em), `\qquad` (2em) and backslash-space (1/3em), e.g. `\int_a^b f(x)\,dx`. Mu spaces scale with the script style; em spaces do not. Spacing never changes operator classification or automatic spacing, and takes no scripts. A formula made only of spacing returns `MathError::EmptyFormula`. Still unsupported: `\hspace`, `\phantom`, `\left/\right`, `\text`, accents.
    - The bundled font is a modified, renamed subset of STIX Two Math under OFL-1.1; see [`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 4. **Business Components (`component`)**: Pure-Rust QR Code matrix generator + KPI executive metric cards.
 

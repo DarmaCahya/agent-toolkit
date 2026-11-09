@@ -30,6 +30,14 @@ impl BigOpKind {
     }
 }
 
+/// Explicit horizontal glue: signed math units (18 mu = 1 quad of the style in
+/// effect) or signed font-relative em that ignores the style.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) enum Glue {
+    Mu(f64),
+    Em(f64),
+}
+
 /// AST node with the char-index position of its first token.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Node {
@@ -59,6 +67,23 @@ pub(crate) enum NodeKind {
         sup: Option<Box<Node>>,
         sub: Option<Box<Node>>,
     },
+    /// Explicit spacing command; never takes scripts.
+    Space(Glue),
+}
+
+/// Explicit spacing commands: comma, colon, semicolon, bang, backslash-space,
+/// `quad` and `qquad`.
+fn space_command(name: &str) -> Option<Glue> {
+    match name {
+        "," => Some(Glue::Mu(3.0)),
+        ":" => Some(Glue::Mu(4.0)),
+        ";" => Some(Glue::Mu(5.0)),
+        "!" => Some(Glue::Mu(-3.0)),
+        " " => Some(Glue::Em(1.0 / 3.0)),
+        "quad" => Some(Glue::Em(1.0)),
+        "qquad" => Some(Glue::Em(2.0)),
+        _ => None,
+    }
 }
 
 const GREEK_LOWER: [(&str, u32); 24] = [
@@ -255,6 +280,10 @@ impl Parser<'_> {
             },
             _ => self.parse_nucleus(depth)?,
         };
+        // Glue takes no scripts: a following `^`/`_` starts a new item.
+        if matches!(base.kind, NodeKind::Space(_)) {
+            return Ok(base);
+        }
         let mut sup: Option<Box<Node>> = None;
         let mut sub: Option<Box<Node>> = None;
         loop {
@@ -459,7 +488,12 @@ impl Parser<'_> {
                 })
             }
             _ => {
-                if let Some(sym) = symbol_command(name) {
+                if let Some(glue) = space_command(name) {
+                    Ok(Node {
+                        kind: NodeKind::Space(glue),
+                        pos,
+                    })
+                } else if let Some(sym) = symbol_command(name) {
                     Ok(Node {
                         kind: NodeKind::Symbol(sym),
                         pos,
