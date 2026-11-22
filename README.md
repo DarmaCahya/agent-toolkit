@@ -6,8 +6,16 @@ This repository is a **Cargo Workspace Monorepo** hosting high-performance, zero
 
 | Crate | Crates.io | Status | Description |
 | :--- | :---: | :---: | :--- |
-| [**`pdf-agent`**](crates/pdf-agent) | [![crates.io](https://img.shields.io/crates/v/pdf-agent.svg)](https://crates.io/crates/pdf-agent) | 🟢 **v0.1.0 (Live)** | Memory-guarded PDF facade: structured Markdown extraction, pure CPU visual rasterization, and HTML-to-PDF vector generation. |
-| [**`agent-canvas`**](crates/agent-canvas) | [![crates.io](https://img.shields.io/crates/v/agent-canvas.svg)](https://crates.io/crates/agent-canvas) | 🟡 **v0.1.0 (In Progress)** | Visual computing & calculation artifacts: flowcharts, business charts, LaTeX math typesetting to vector SVG (fractions, roots, scripts, big operators; bundled STIX Two Math subset, see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)), and Excel formula evaluation. |
+| [**`pdf-agent`**](crates/pdf-agent) | [![crates.io](https://img.shields.io/crates/v/pdf-agent.svg)](https://crates.io/crates/pdf-agent) | 🟢 **v0.1.1 (Live)** | Memory-guarded PDF facade: structured Markdown extraction, pure CPU visual rasterization, and HTML-to-PDF vector generation. |
+| [**`agent-canvas`**](crates/agent-canvas) | [![crates.io](https://img.shields.io/crates/v/agent-canvas.svg)](https://crates.io/crates/agent-canvas) | 🟡 **v0.1.0 (source)** | Visual computing & calculation artifacts: flowcharts, business charts, LaTeX math typesetting to vector SVG, Excel formula evaluation, QR codes and KPI cards. |
+
+---
+
+## 🤖 For AI agents and LLM crawlers
+
+- **[`llms.txt`](llms.txt)** — one-page index: capability → API → "why this over the usual alternative".
+- **[`llms-full.txt`](llms-full.txt)** — full context: architecture, dependencies, API surface, hard limits, FAQ.
+- **Ground rules the artifacts guarantee:** deterministic byte-identical SVG, `<path>`/`<rect>`/`<use>` only (no `<text>`, no `font-family`, no external URLs), typed `thiserror` errors instead of panics, hard input/nesting caps, and no runtime dependency on a browser, Node.js, Python, system fonts or a C toolchain.
 
 ---
 
@@ -16,16 +24,19 @@ This repository is a **Cargo Workspace Monorepo** hosting high-performance, zero
 ```text
 .
 ├── Cargo.toml                  <-- Root Cargo Workspace
+├── llms.txt / llms-full.txt    <-- machine-readable context for LLM crawlers
 ├── crates/
-│   ├── pdf-agent/              <-- [Crate: pdf-agent v0.1.0]
+│   ├── pdf-agent/              <-- [Crate: pdf-agent v0.1.1]
 │   │   ├── Cargo.toml
 │   │   ├── src/
 │   │   └── tests/
 │   │
 │   └── agent-canvas/           <-- [Crate: agent-canvas v0.1.0]
+│       ├── assets/fonts/       <-- bundled, licenced glyph subsets
 │       ├── Cargo.toml
 │       ├── src/
 │       └── tests/
+└── scripts/                    <-- reproducible font subsetting
 ```
 
 ---
@@ -38,8 +49,9 @@ This repository is a **Cargo Workspace Monorepo** hosting high-performance, zero
 - **Documentation:** See [`crates/pdf-agent/README.md`](crates/pdf-agent/README.md) or [docs.rs/pdf-agent](https://docs.rs/pdf-agent).
 
 ### 2. `agent-canvas`
-- **Why it exists:** AI agents frequently need to generate visual artifacts (decision trees, sales funnels, portfolio donuts, LaTeX formulas) without depending on heavy headless browsers (Chromium), Python (matplotlib), or Node.js. `agent-canvas` is built from first principles in 100% pure Rust.
-- **Install:** `cargo add agent-canvas` (upcoming)
+- **Why it exists:** AI agents frequently need to generate visual artifacts (decision trees, sales funnels, portfolio donuts, LaTeX formulas, QR codes, KPI cards) without depending on headless browsers (Chromium), Python (matplotlib), Node.js (Mermaid/KaTeX) or C libraries.
+- **Capabilities:** `graph` (flowchart DSL + Manhattan routing), `chart` (donut, 2×2 quadrant, funnel, bar, line, waterfall, sparkline), `math` (LaTeX → SVG typesetter and Excel formula evaluator), `component` (QR codes, KPI cards).
+- **Install:** `cargo add agent-canvas` (upcoming release)
 - **Documentation:** See [`crates/agent-canvas/README.md`](crates/agent-canvas/README.md).
 
 ---
@@ -51,7 +63,7 @@ Compile the entire workspace:
 cargo build --workspace
 ```
 
-Run all unit, contract, and adversarial tests across all crates:
+Run all unit, contract, snapshot, property and adversarial tests across all crates:
 ```bash
 cargo test --workspace
 ```
@@ -60,5 +72,5 @@ cargo test --workspace
 
 ## ⚖️ License
 
-Dual-licensed under **MIT** or **Apache-2.0**.
+Dual-licensed under **MIT** or **Apache-2.0**. Bundled font subsets are third-party assets under their own licences — see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 Maintained by Darma Cahya (`darmady6@gmail.com`).
