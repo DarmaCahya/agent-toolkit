@@ -14,6 +14,7 @@
 
 pub mod canvas;
 pub mod chart;
+pub mod component;
 pub mod error;
 pub mod graph;
 pub mod math;
@@ -26,6 +27,7 @@ pub use chart::{
     BarChart, BarSeries, CartesianPlot, DonutChart, DonutSlice, FunnelChart, FunnelStage,
     LineChart, LineSeries, QuadrantItem, QuadrantMatrix, Sparkline, WaterfallChart, WaterfallItem,
 };
+pub use component::{DeltaTrend, EccLevel, KpiCard, QrCode, QrError, QrMode};
 pub use error::{CanvasError, Result};
 pub use graph::{Direction, Edge, EdgeStyle, Flowchart, Node, NodeShape};
 pub use math::{calculate_slice_angles, CategoryScale, LinearScale, TickGenerator};
