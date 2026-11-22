@@ -10,6 +10,17 @@ description = "Pure-Rust visual computing & calculation artifacts for AI agents:
 readme = "README.md"
 keywords = ["ai-agent", "svg", "chart", "diagram", "math"]
 categories = ["graphics", "text-processing", "visualization"]
+documentation = "https://docs.rs/agent-canvas"
+# Keep the published package to source + assets: probe/rendered artifacts and the
+# authoring scripts are not part of the library.
+exclude = [
+    "examples/**/*.png",
+    "examples/**/*.svg",
+    "examples/**/*.json",
+    "specs/",
+    "tests/snapshots/*.snap.new",
+    "generate_graph_claude.py",
+]
 
 [[example]]
 name = "issue_006_demo"
