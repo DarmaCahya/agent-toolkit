@@ -48,8 +48,7 @@ pub(crate) fn mul(a: u8, b: u8) -> u8 {
 /// first with a leading coefficient of 1.
 pub(crate) fn generator(degree: usize) -> Vec<u8> {
     let mut poly = vec![1u8];
-    for i in 0..degree {
-        let root = TABLES.exp[i];
+    for &root in TABLES.exp.iter().take(degree) {
         let mut next = vec![0u8; poly.len() + 1];
         for (j, &coefficient) in poly.iter().enumerate() {
             next[j] ^= coefficient;
