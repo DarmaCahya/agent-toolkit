@@ -301,6 +301,14 @@ impl Path {
         self
     }
 
+    /// Appends a command in place.
+    ///
+    /// Crate-internal: used by builders that emit many commands (such as the
+    /// glyph outline adapter) without the cost of chaining owned `Path` values.
+    pub(crate) fn push_command(&mut self, command: PathCommand) {
+        self.commands.push(command);
+    }
+
     /// Serializes to an SVG path `d` attribute value.
     /// Prepends `M0 0` if the first command is not a MoveTo to ensure valid SVG path syntax.
     pub fn to_svg_d(&self) -> String {

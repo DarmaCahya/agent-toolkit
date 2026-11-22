@@ -20,6 +20,86 @@ Zero external runtime dependencies (no Node.js, no Chromium, no Python).
    - The bundled font is a modified, renamed subset of STIX Two Math under OFL-1.1; see [`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md).
 4. **Business Components (`component`)**: Pure-Rust QR Code matrix generator + KPI executive metric cards.
 
+## QR Codes and KPI cards (`component`)
+
+Pure-vector business artifacts for reports, dashboards and chat messages. Both components
+emit deterministic SVG with no `<text>`, `font-family`, scripts or external references.
+
+### QR Code generator
+
+`QrCode::encode` implements ISO/IEC 18004 versions 1–10 with numeric, alphanumeric and
+UTF-8 byte modes. The mode and the smallest fitting version are selected automatically,
+Reed-Solomon error correction is computed per block and interleaved, and all eight data
+masks are scored with the four standard penalty rules before the best one is used.
+
+```rust
+use agent_canvas::component::{EccLevel, QrCode, QrMode};
+use agent_canvas::canvas::ThemeMode;
+
+let qr = QrCode::encode("https://example.com/agent-canvas")?
+    .with_size(320.0)          // square output in pixels (default 256)
+    .with_quiet_zone(4)        // modules on each side (default 4)
+    .with_theme(ThemeMode::Light);
+
+let svg = qr.to_svg();         // full document, one merged <path>
+let path = qr.to_path();       // just the <path> element
+let rects = qr.to_rects();     // one <rect> per dark module
+assert_eq!(qr.version(), 3);
+assert_eq!(qr.size(), 29);     // 17 + 4 * version
+```
+
+- **Error correction**: `EccLevel::{L, M, Q, H}`; `QrCode::encode_with_ecc(data, ecc)`
+  selects the level explicitly. `QrCode::encode_with_mask(data, ecc, mask)` fixes the mask
+  for reproducible fixtures.
+- **Capacity**: `QrCode::capacity(version, ecc, mode)` returns the character capacity
+  derived from the ISO codeword tables, e.g. 16 alphanumeric characters for 1-Q.
+- **Errors**: `QrError` is a `#[non_exhaustive]` `thiserror` enum — `EmptyInput`,
+  `DataTooLong { .. }`, `InvalidMask(..)`, `UnsupportedVersion(..)`. Library code never
+  panics; invalid sizes are ignored and quiet zones are clamped.
+- **Limits**: versions 1–10 (up to 271 bytes at 10-L), no Kanji, Micro QR, ECI or
+  structured append.
+- **Tests**: the suite pins reference matrices (masks 0, 5 and 7) produced by two
+  independent encoders, Thonky's published "HELLO WORLD" 1-M codewords, all 32 published
+  format strings and versions 7–10 version strings, plus a test-only decoder that
+  round-trips numeric, alphanumeric and byte payloads across every ECC level and version.
+
+### KPI metric card
+
+```rust
+use agent_canvas::component::KpiCard;
+use agent_canvas::canvas::ThemeMode;
+
+let svg = KpiCard::new("Monthly Revenue", "Rp 1.24B")
+    .with_delta("+12.4%", true)          // green badge
+    .with_caption("vs. last month")
+    .with_theme(ThemeMode::Dark)
+    .to_svg();
+
+let churn = KpiCard::new("Customer Churn", "2.1%")
+    .with_delta("+0.4pp", false)         // red badge
+    .to_svg();
+
+let flat = KpiCard::new("Headcount", "128")
+    .with_neutral_delta("0.0%")          // neutral badge
+    .to_svg();
+```
+
+The card is laid out in a 320×160 design space and scaled through the SVG view box
+(`with_size(640.0, 320.0)` changes only the output dimensions). Titles and labels are
+rendered from a bundled DejaVu Sans subset as glyph outlines (see
+[`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md)); long values shrink from 40 px
+to 18 px instead of overflowing. `with_delta_trend` exposes the full
+`DeltaTrend::{Positive, Negative, Neutral}` choice.
+
+### Runnable example
+
+```bash
+cargo run -p agent-canvas --example issue_010_demo
+```
+
+Writes QR and KPI SVGs to the system temp directory and prints version, ECC, mode, mask and
+capacity for each generated symbol.
+
 ## Excel formula evaluator
 
 `ExcelEvaluator` evaluates Excel-style formulas deterministically, with Excel's operator quirks

@@ -28,6 +28,10 @@ name = "issue_009_demo"
 path = "examples/issue-009-demo/main.rs"
 
 [[example]]
+name = "issue_010_demo"
+path = "examples/issue-010-demo/main.rs"
+
+[[example]]
 name = "latex_quadratic"
 path = "examples/latex-quadratic/main.rs"
 
