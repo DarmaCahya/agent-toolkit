@@ -19,9 +19,10 @@ if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
 fi
 
 # Code points: ASCII digits/symbols and stretchy delimiters ( ) [ ] { } |,
-# math italic Latin (+ U+210E), math italic lowercase Greek, upright uppercase
-# Greek, operators and big operators.
-UNICODES="0030-0039,0028,0029,005B,005D,007B,007D,007C,002B,002C,003C,003D,003E,2212,00B1,00B7,00D7,2264,2265,2260,221E,221A,2211,222B,220F,210E,1D434-1D467,1D6FC-1D714,0391-0393,0394,0395-03A9"
+# double vertical bar U+2016 (for \| \lVert \rVert), angle brackets
+# U+27E8/U+27E9 (for \langle \rangle), math italic Latin (+ U+210E), math
+# italic lowercase Greek, upright uppercase Greek, operators and big operators.
+UNICODES="0030-0039,0028,0029,005B,005D,007B,007D,007C,2016,27E8,27E9,002B,002C,003C,003D,003E,2212,00B1,00B7,00D7,2264,2265,2260,221E,221A,2211,222B,220F,210E,1D434-1D467,1D6FC-1D714,0391-0393,0394,0395-03A9"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT

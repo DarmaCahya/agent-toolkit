@@ -231,9 +231,9 @@ fn trailing_backslash_space_vs_lone_backslash() {
 #[test]
 fn unsupported_commands_still_error_with_new_hint() {
     for (src, name, pos) in [
-        (r"\left", "left", 0),
         (r"\text", "text", 0),
         (r"\hat", "hat", 0),
+        (r"\vec", "vec", 0),
     ] {
         match render(src) {
             Err(MathError::Unsupported {

@@ -67,6 +67,12 @@ pub(crate) enum NodeKind {
         sup: Option<Box<Node>>,
         sub: Option<Box<Node>>,
     },
+    /// `\left<delim> ... \right<delim>`; `None` is the null delimiter `.`.
+    LeftRight {
+        left: Option<char>,
+        right: Option<char>,
+        body: Vec<Node>,
+    },
     /// Explicit spacing command; never takes scripts.
     Space(Glue),
 }
@@ -140,9 +146,7 @@ const OPERATOR_SYMBOLS: [(&str, char, AtomClass); 10] = [
     ("infty", '\u{221E}', AtomClass::Ord),
 ];
 
-const UNSUPPORTED: [&str; 27] = [
-    "left",
-    "right",
+const UNSUPPORTED: [&str; 25] = [
     "text",
     "begin",
     "end",
@@ -193,11 +197,29 @@ fn symbol_command(name: &str) -> Option<Sym> {
         })
 }
 
+/// Human-readable source text of a token, for error messages.
+fn token_text(kind: &TokenKind) -> String {
+    match kind {
+        TokenKind::Letter(c) | TokenKind::Digit(c) | TokenKind::Symbol(c) => c.to_string(),
+        TokenKind::Command(name) => format!("\\{name}"),
+        TokenKind::LBrace => "{".into(),
+        TokenKind::RBrace => "}".into(),
+        TokenKind::LBracket => "[".into(),
+        TokenKind::RBracket => "]".into(),
+        TokenKind::Caret => "^".into(),
+        TokenKind::Underscore => "_".into(),
+        TokenKind::Dot => ".".into(),
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Stop {
     Eof,
     Brace,
     Bracket,
+    /// Inside `\left ...`: stop before the matching `\right`. Carries the
+    /// position of the `\left` for the error when the `\right` never comes.
+    Right(usize),
 }
 
 struct Parser<'a> {
@@ -241,11 +263,19 @@ impl Parser<'_> {
                     Stop::Eof => Ok(items),
                     Stop::Brace => Err(self.eof("`}` to close the group")),
                     Stop::Bracket => Err(self.eof("`]` to close the root index")),
+                    Stop::Right(left_pos) => Err(MathError::MissingRight { pos: left_pos }),
                 };
             };
             match (&tok.kind, stop) {
                 (TokenKind::RBrace, Stop::Brace) | (TokenKind::RBracket, Stop::Bracket) => {
                     return Ok(items);
+                }
+                // `\right` closes the list; the caller consumes it.
+                (TokenKind::Command(name), Stop::Right(_)) if name == "right" => {
+                    return Ok(items);
+                }
+                (TokenKind::RBrace, Stop::Right(left_pos)) => {
+                    return Err(MathError::MissingRight { pos: left_pos });
                 }
                 (TokenKind::RBrace, _) => {
                     return Err(MathError::UnexpectedChar {
@@ -377,12 +407,15 @@ impl Parser<'_> {
                     '=' | '<' | '>' => AtomClass::Rel,
                     '(' => AtomClass::Open,
                     ')' => AtomClass::Close,
+                    '|' => AtomClass::Ord,
                     _ => AtomClass::Punct,
                 };
                 Ok(sym(math_char(c), class))
             }
             TokenKind::LBrace => self.parse_group(depth, pos),
             TokenKind::Command(name) => self.parse_command(&name, pos, depth),
+            // `.` is only valid as a null delimiter after `\left` / `\right`.
+            TokenKind::Dot => Err(MathError::UnexpectedChar { pos, ch: '.' }),
             TokenKind::LBracket => Err(MathError::UnexpectedChar { pos, ch: '[' }),
             // Callers filter these out before reaching here.
             TokenKind::RBrace => Err(MathError::UnexpectedChar { pos, ch: '}' }),
@@ -401,6 +434,76 @@ impl Parser<'_> {
             kind: NodeKind::Group(items),
             pos: open_pos,
         })
+    }
+
+    /// Parses `\left<delim> ... \right<delim>`; `pos` is the `\left` position.
+    fn parse_left_right(&mut self, pos: usize, depth: usize) -> Result<Node, MathError> {
+        let left = self.delimiter("left")?;
+        let inner = self.enter(depth, pos)?;
+        let body = self.parse_list(inner, Stop::Right(pos))?;
+        // parse_list stopped before the `\right`; consume it and read its delimiter.
+        let closing = matches!(
+            self.peek(),
+            Some(Token {
+                kind: TokenKind::Command(name),
+                ..
+            }) if name == "right"
+        );
+        if !closing {
+            return Err(MathError::MissingRight { pos });
+        }
+        self.bump();
+        let right = self.delimiter("right")?;
+        Ok(Node {
+            kind: NodeKind::LeftRight { left, right, body },
+            pos,
+        })
+    }
+
+    /// Reads the delimiter token after `\left` / `\right`. `None` is the null
+    /// delimiter `.`; a missing or unsupported delimiter is a located error.
+    fn delimiter(&mut self, command: &'static str) -> Result<Option<char>, MathError> {
+        let Some(tok) = self.bump() else {
+            return Err(MathError::InvalidDelimiter {
+                pos: self.end,
+                command,
+                found: "end of input".into(),
+            });
+        };
+        let delim = match &tok.kind {
+            TokenKind::Symbol('(') => Some('('),
+            TokenKind::Symbol(')') => Some(')'),
+            TokenKind::Symbol('|') => Some('|'),
+            TokenKind::LBracket => Some('['),
+            TokenKind::RBracket => Some(']'),
+            TokenKind::LBrace => Some('{'),
+            TokenKind::RBrace => Some('}'),
+            TokenKind::Dot => None,
+            TokenKind::Command(name) => match name.as_str() {
+                "{" => Some('{'),
+                "}" => Some('}'),
+                "|" => Some('\u{2016}'),
+                "lvert" | "rvert" => Some('|'),
+                "lVert" | "rVert" => Some('\u{2016}'),
+                "langle" => Some('\u{27E8}'),
+                "rangle" => Some('\u{27E9}'),
+                _ => {
+                    return Err(MathError::InvalidDelimiter {
+                        pos: tok.pos,
+                        command,
+                        found: format!("\\{name}"),
+                    })
+                }
+            },
+            other => {
+                return Err(MathError::InvalidDelimiter {
+                    pos: tok.pos,
+                    command,
+                    found: token_text(other),
+                })
+            }
+        };
+        Ok(delim)
     }
 
     fn enter(&self, depth: usize, pos: usize) -> Result<usize, MathError> {
@@ -434,6 +537,8 @@ impl Parser<'_> {
 
     fn parse_command(&mut self, name: &str, pos: usize, depth: usize) -> Result<Node, MathError> {
         match name {
+            "left" => self.parse_left_right(pos, depth),
+            "right" => Err(MathError::UnexpectedRight { pos }),
             "frac" => {
                 let num = self.braced_arg(depth, name, pos)?;
                 let den = self.braced_arg(depth, name, pos)?;
@@ -644,10 +749,25 @@ mod tests {
             p(r"\foo"),
             Err(MathError::UnknownCommand { pos: 0, ref name }) if name == "foo"
         ));
-        assert!(matches!(
+        assert_eq!(
             p(r"\left"),
-            Err(MathError::Unsupported { pos: 0, .. })
-        ));
+            Err(MathError::InvalidDelimiter {
+                pos: 5,
+                command: "left",
+                found: "end of input".into()
+            })
+        );
+        assert_eq!(p(r"\right)"), Err(MathError::UnexpectedRight { pos: 0 }));
+        assert_eq!(p(r"\left( x"), Err(MathError::MissingRight { pos: 0 }));
+        assert_eq!(p(r"{\left( x }"), Err(MathError::MissingRight { pos: 1 }));
+        assert_eq!(
+            p(r"\left. x \right+"),
+            Err(MathError::InvalidDelimiter {
+                pos: 15,
+                command: "right",
+                found: "+".into()
+            })
+        );
         assert_eq!(
             p("x^2^3"),
             Err(MathError::DoubleScript {
@@ -682,6 +802,74 @@ mod tests {
             p("}"),
             Err(MathError::UnexpectedChar { ch: '}', .. })
         ));
+    }
+
+    #[test]
+    fn left_right_shapes_and_delimiters() {
+        let items = p(r"\left( x \right)").unwrap();
+        assert_eq!(items.len(), 1);
+        let NodeKind::LeftRight { left, right, body } = &items[0].kind else {
+            panic!("expected left-right")
+        };
+        assert_eq!((*left, *right), (Some('('), Some(')')));
+        assert_eq!(body.len(), 1);
+
+        // Everything after the group is a sibling, not part of the body.
+        let items = p(r"\left( x \right) y").unwrap();
+        assert_eq!(items.len(), 2);
+        assert!(matches!(items[0].kind, NodeKind::LeftRight { .. }));
+        assert!(matches!(items[1].kind, NodeKind::Symbol(_)));
+
+        // Every supported delimiter spelling.
+        let cases: [(&str, Option<char>, Option<char>); 6] = [
+            (r"\left[ x \right]", Some('['), Some(']')),
+            (r"\left\{ x \right\}", Some('{'), Some('}')),
+            (r"\left| x \right|", Some('|'), Some('|')),
+            (r"\left\| x \right\|", Some('\u{2016}'), Some('\u{2016}')),
+            (
+                r"\left\langle x \right\rangle",
+                Some('\u{27E8}'),
+                Some('\u{27E9}'),
+            ),
+            (r"\left. x \right.", None, None),
+        ];
+        for (src, l, r) in cases {
+            let items = p(src).unwrap();
+            let NodeKind::LeftRight { left, right, .. } = &items[0].kind else {
+                panic!("{src}: expected left-right")
+            };
+            assert_eq!((*left, *right), (l, r), "{src}");
+        }
+        // The `l`/`r`-prefixed aliases map to the same drawn glyphs.
+        for (src, want) in [
+            (r"\left\lvert x \right\rvert", '|'),
+            (r"\left\lVert x \right\rVert", '\u{2016}'),
+        ] {
+            let NodeKind::LeftRight { left, right, .. } = &p(src).unwrap()[0].kind else {
+                panic!("{src}")
+            };
+            assert_eq!((*left, *right), (Some(want), Some(want)), "{src}");
+        }
+    }
+
+    #[test]
+    fn left_right_nests_and_takes_scripts() {
+        let items = p(r"\left( \left[ x \right] \right)").unwrap();
+        let NodeKind::LeftRight { body, .. } = &items[0].kind else {
+            panic!("expected outer group")
+        };
+        assert_eq!(body.len(), 1);
+        let NodeKind::LeftRight { left, right, .. } = &body[0].kind else {
+            panic!("expected inner group")
+        };
+        assert_eq!((*left, *right), (Some('['), Some(']')));
+        // Scripts attach to the whole group as a normal nucleus.
+        let items = p(r"\left( x \right)^2").unwrap();
+        let NodeKind::Scripts { base, sup, sub } = &items[0].kind else {
+            panic!("expected scripts")
+        };
+        assert!(matches!(base.kind, NodeKind::LeftRight { .. }));
+        assert!(sup.is_some() && sub.is_none());
     }
 
     #[test]

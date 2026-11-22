@@ -3,7 +3,8 @@
 use super::font::MathConsts;
 use super::parser::{BigOpKind, Glue, Node, NodeKind};
 
-/// TeX atom classes (the `Inner` class is omitted in v1).
+/// TeX atom classes, including the `Inner` class produced by
+/// `\left ... \right`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum AtomClass {
     Ord,
@@ -13,6 +14,7 @@ pub(crate) enum AtomClass {
     Open,
     Close,
     Punct,
+    Inner,
 }
 
 /// Maps an input character to the code point of the math glyph to draw.
@@ -134,16 +136,23 @@ impl Style {
     }
 }
 
-/// Inter-atom space in mu from the TeX table. Entries that TeX gives in
-/// parentheses apply to non-script styles only.
+/// Inter-atom space in mu from the TeX table (TeXbook, Chapter 18). Entries
+/// that TeX gives in parentheses apply to non-script styles only.
 pub(crate) fn space(left: AtomClass, right: AtomClass, style: Style) -> f64 {
-    use AtomClass::{Bin, Close, Op, Open, Ord, Punct, Rel};
+    use AtomClass::{Bin, Close, Inner, Op, Open, Ord, Punct, Rel};
     // Positive: always; negative: non-script only. Magnitude: 1 thin, 2 medium, 3 thick.
     let code: i8 = match (left, right) {
         (Ord, Op) | (Op, Ord | Op) | (Close, Op) => 1,
         (Ord, Bin) | (Bin, Ord | Op | Open) | (Close, Bin) => -2,
         (Ord, Rel) | (Op, Rel) | (Rel, Ord | Op | Open) | (Close, Rel) => -3,
         (Punct, Ord | Op | Rel | Open | Close | Punct) => -1,
+        // `\left ... \right` is an Inner atom: TeXbook row and column "Inner".
+        (Ord | Op | Close | Punct | Inner, Inner) => -1,
+        (Inner, Ord | Open | Punct) => -1,
+        (Inner, Op) => 1,
+        (Inner, Bin) | (Bin, Inner) => -2,
+        (Inner, Rel) | (Rel, Inner) => -3,
+        (Inner, Close) => 0,
         _ => 0,
     };
     let mu = match code.unsigned_abs() {
@@ -192,6 +201,12 @@ pub(crate) enum AtomContent {
         sup: Option<Vec<Atom>>,
         sub: Option<Vec<Atom>>,
     },
+    /// `\left ... \right`: an Inner atom. `None` delimiters draw nothing.
+    LeftRight {
+        left: Option<char>,
+        right: Option<char>,
+        body: Vec<Atom>,
+    },
     /// Explicit horizontal glue. Its atom class is a placeholder that is never
     /// read: glue is transparent to classification and automatic spacing.
     Space(Glue),
@@ -217,6 +232,7 @@ pub(crate) fn contains_glue(atoms: &[Atom]) -> bool {
             contains_glue(std::slice::from_ref(nucleus)) || nested(sup) || nested(sub)
         }
         AtomContent::BigOp { sup, sub, .. } => nested(sup) || nested(sub),
+        AtomContent::LeftRight { body, .. } => contains_glue(body),
     })
 }
 
@@ -281,6 +297,14 @@ fn node_to_atom(node: &Node) -> Atom {
         NodeKind::Space(glue) => Atom {
             class: AtomClass::Ord,
             content: AtomContent::Space(*glue),
+        },
+        NodeKind::LeftRight { left, right, body } => Atom {
+            class: AtomClass::Inner,
+            content: AtomContent::LeftRight {
+                left: *left,
+                right: *right,
+                body: build_atoms(body),
+            },
         },
     }
 }
@@ -446,6 +470,53 @@ mod tests {
         assert_eq!(space(Ord, Rel, s), 0.0);
         assert_eq!(space(Ord, Op, s), 3.0);
         assert_eq!(space(Punct, Ord, s), 0.0);
+    }
+
+    #[test]
+    fn left_right_is_an_inner_atom() {
+        use AtomClass::*;
+        assert_eq!(classes(r"\left( x \right)"), vec![Inner]);
+        assert_eq!(
+            classes(r"a+\left(x\right)=b"),
+            vec![Ord, Bin, Inner, Rel, Ord]
+        );
+        // Inner never demotes a neighbouring Bin (TeX only demotes before
+        // Rel, Close and Punct).
+        assert_eq!(classes(r"\left(x\right)+y"), vec![Inner, Bin, Ord]);
+        assert_eq!(classes(r"y+\left(x\right)"), vec![Ord, Bin, Inner]);
+    }
+
+    #[test]
+    fn inner_spacing_table() {
+        use AtomClass::*;
+        let t = Style {
+            size: StyleSize::T,
+            cramped: false,
+        };
+        let s = Style {
+            size: StyleSize::S,
+            cramped: false,
+        };
+        // Ord/Op/Close/Punct/Inner before Inner: thin.
+        for left in [Ord, Op, Close, Punct, Inner] {
+            assert_eq!(space(left, Inner, t), 3.0, "{left:?}-Inner");
+        }
+        // Inner before Ord/Open/Punct/Inner: thin; before Close: none.
+        for right in [Ord, Open, Punct, Inner] {
+            assert_eq!(space(Inner, right, t), 3.0, "Inner-{right:?}");
+        }
+        assert_eq!(space(Inner, Close, t), 0.0);
+        assert_eq!(space(Open, Inner, t), 0.0);
+        // Medium and thick around Inner, in both directions.
+        assert_eq!(space(Inner, Bin, t), 4.0);
+        assert_eq!(space(Bin, Inner, t), 4.0);
+        assert_eq!(space(Inner, Rel, t), 5.0);
+        assert_eq!(space(Rel, Inner, t), 5.0);
+        // Parenthesised entries vanish in script styles; Inner-Op does not.
+        assert_eq!(space(Ord, Inner, s), 0.0);
+        assert_eq!(space(Inner, Bin, s), 0.0);
+        assert_eq!(space(Inner, Rel, s), 0.0);
+        assert_eq!(space(Inner, Op, s), 3.0);
     }
 
     #[test]
