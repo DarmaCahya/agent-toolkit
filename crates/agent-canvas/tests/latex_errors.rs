@@ -53,7 +53,6 @@ fn unknown_command() {
 #[test]
 fn unsupported_commands_are_named() {
     for (src, name, pos) in [
-        (r"\left( x \right)", "left", 0),
         (r"\text{hi}", "text", 0),
         (r"\begin{matrix}", "begin", 0),
         (r"\hat{x}", "hat", 0),

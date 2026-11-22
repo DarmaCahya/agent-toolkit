@@ -236,6 +236,10 @@ impl<'a> Layout<'a> {
                 let (sup, sub) = self.layout_scripts(sup, sub, style)?;
                 Ok(self.scripts(n, sup, sub, style, kind, gid))
             }
+            AtomContent::LeftRight { left, right, body } => {
+                let b = self.layout_list(body, style)?;
+                self.left_right(*left, *right, b, style)
+            }
             AtomContent::BigOp {
                 ch,
                 side_scripts,
@@ -298,6 +302,51 @@ impl<'a> Layout<'a> {
                 scale: s,
             }],
         })
+    }
+
+    /// Rule 19: `\left ... \right`. Both delimiters grow to cover the body
+    /// (and to be symmetric about the math axis, as TeX requires) and are
+    /// centred on the axis; the result is one Inner atom. A null delimiter
+    /// (`\left.` / `\right.`) draws nothing.
+    pub(crate) fn left_right(
+        &self,
+        left: Option<char>,
+        right: Option<char>,
+        body: LBox,
+        style: Style,
+    ) -> Result<LBox, MathError> {
+        let axis = self.c.axis_height * style.scale(&self.c);
+        // Half-extent the delimiter must cover above and below the axis.
+        let half = (body.height - axis).max(body.depth + axis);
+        // Cover the body's total extent as well, then never shrink below the
+        // delimiter's own natural size (stretchy returns the base glyph then).
+        let required = (body.height + body.depth).max(2.0 * half);
+        let mut out = LBox::empty();
+        if let Some(ch) = left {
+            out.append(self.delimiter(ch, required, axis, style)?);
+        }
+        out.append(body);
+        if let Some(ch) = right {
+            out.append(self.delimiter(ch, required, axis, style)?);
+        }
+        out.italic = 0.0;
+        out.finite()?;
+        Ok(out)
+    }
+
+    /// One `\left` / `\right` delimiter, grown to `required` em of total
+    /// vertical extent and centred on `axis`.
+    fn delimiter(
+        &self,
+        ch: char,
+        required: f64,
+        axis: f64,
+        style: Style,
+    ) -> Result<LBox, MathError> {
+        let gid = self.font.glyph(ch)?;
+        let d = self.stretchy(gid, required, style)?;
+        let centre = axis - (d.height - d.depth) / 2.0;
+        Ok(d.shifted_up(centre))
     }
 
     /// Rule 15: fraction with a bar centred on the math axis.
@@ -989,6 +1038,46 @@ mod tests {
             assert!(extender_count(&b, &asm) <= MAX_EXTENDERS, "required {r}");
             assert!(b.items.len() > 1);
         }
+    }
+
+    #[test]
+    fn left_right_centres_and_covers_the_body() {
+        let f = font();
+        let l = Layout::new(&f);
+        let axis = f.consts().axis_height;
+        // Short body: the base glyphs are tall enough and are centred on the axis.
+        let body = l.glyph_box('\u{1D465}', S).unwrap();
+        let b = l.left_right(Some('('), Some(')'), body.clone(), S).unwrap();
+        assert_eq!(b.items.len(), 3);
+        assert!((b.height - b.depth - 2.0 * axis).abs() < 1e-9);
+        let paren = f.advance(f.glyph('(').unwrap());
+        assert!((b.width - (2.0 * paren + body.width)).abs() < 1e-9);
+        // Null delimiters draw nothing and change no metric (an Inner atom has
+        // no italic correction of its own).
+        let null = l.left_right(None, None, body.clone(), S).unwrap();
+        assert_eq!(null.width, body.width);
+        assert_eq!(null.height, body.height);
+        assert_eq!(null.depth, body.depth);
+        assert_eq!(null.items, body.items);
+        assert_eq!(null.italic, 0.0);
+        // A tall body grows both delimiters until they cover it.
+        let tall = LBox {
+            width: 1.0,
+            height: 4.0,
+            depth: 1.0,
+            ..LBox::default()
+        };
+        let b = l.left_right(Some('['), Some(']'), tall.clone(), S).unwrap();
+        assert!(b.height >= tall.height && b.depth >= tall.depth);
+        assert!((b.height - b.depth - 2.0 * axis).abs() < 1e-9);
+        assert!(
+            b.items.len() > 2,
+            "tall delimiters are assembled or variant"
+        );
+        b.finite().unwrap();
+        // A null side adds no width at all.
+        let one = l.left_right(None, Some(']'), tall, S).unwrap();
+        assert!(one.width < b.width);
     }
 
     #[test]

@@ -39,12 +39,17 @@ pub const MAX_DEPTH: usize = 64;
 /// formula  := item*
 /// item     := atom ( '^' arg | '_' arg )*      // at most one of each per atom
 /// atom     := LETTER | DIGIT | '+' | '-' | '=' | '<' | '>' | '(' | ')' | ','
-///           | symbol-cmd | group | '\frac' group group
+///           | '|' | symbol-cmd | group | '\frac' group group
 ///           | '\sqrt' ('[' formula ']')? group
+///           | '\left' delim formula '\right' delim
 ///           | '\sum' | '\int' | '\prod'
 ///           | spacing                           // takes no scripts
 /// arg      := single-token-atom | group
 /// group    := '{' formula '}'
+/// delim    := '(' | ')' | '[' | ']' | '{' | '}' | '|'
+///           | '\{' | '\}' | '\|' | '\langle' | '\rangle'
+///           | '\lvert' | '\rvert' | '\lVert' | '\rVert'
+///           | '.'                               // null delimiter: draws nothing
 /// symbol-cmd := \alpha … \omega | \Gamma … \Omega | \pm | \cdot | \times
 ///             | \leq | \geq | \neq | \infty
 /// spacing  := '\,' (3mu) | '\:' (4mu) | '\;' (5mu) | '\!' (-3mu)
@@ -54,9 +59,17 @@ pub const MAX_DEPTH: usize = 64;
 /// Mu spaces scale with the script style, em spaces do not. A formula made only
 /// of spacing yields [`MathError::EmptyFormula`].
 ///
-/// Whitespace is ignored. Everything else (for example `\left`, `\text`,
-/// matrices, accents, font commands) is rejected with a [`MathError`] that
-/// carries the character position and a hint.
+/// `\left ... \right` lays out its body as one box, grows each delimiter just
+/// enough to cover it (vertical size variants first, then an OpenType glyph
+/// assembly) and centres both on the math axis; the result is a TeX Inner atom,
+/// so the ordinary inter-atom spacing table applies around it. Delimiters may
+/// be mismatched (`\left( x \right]`), as in TeX; a null delimiter (`.`) draws
+/// nothing. Each `\left` counts toward [`MAX_DEPTH`]. An unclosed `\left`, a
+/// stray `\right` or an unsupported delimiter is a located [`MathError`].
+///
+/// Whitespace is ignored. Everything else (for example `\text`, matrices,
+/// accents, font commands) is rejected with a [`MathError`] that carries the
+/// character position and a hint.
 ///
 /// # Limits and guarantees
 ///

@@ -7,7 +7,7 @@ use super::error::MathError;
 pub(crate) enum TokenKind {
     Letter(char),
     Digit(char),
-    /// One of `+ - = < > ( ) ,`.
+    /// One of `+ - = < > ( ) , |`.
     Symbol(char),
     /// Command name after the backslash.
     Command(String),
@@ -17,6 +17,8 @@ pub(crate) enum TokenKind {
     RBracket,
     Caret,
     Underscore,
+    /// `.`, only meaningful as a null delimiter after `\left` / `\right`.
+    Dot,
 }
 
 /// A token with its char-index position.
@@ -40,13 +42,14 @@ pub(crate) fn lex(input: &str) -> Result<Vec<Token>, MathError> {
             }
             c if c.is_ascii_alphabetic() => TokenKind::Letter(c),
             c if c.is_ascii_digit() => TokenKind::Digit(c),
-            '+' | '-' | '=' | '<' | '>' | '(' | ')' | ',' => TokenKind::Symbol(c),
+            '+' | '-' | '=' | '<' | '>' | '(' | ')' | ',' | '|' => TokenKind::Symbol(c),
             '{' => TokenKind::LBrace,
             '}' => TokenKind::RBrace,
             '[' => TokenKind::LBracket,
             ']' => TokenKind::RBracket,
             '^' => TokenKind::Caret,
             '_' => TokenKind::Underscore,
+            '.' => TokenKind::Dot,
             '\\' => {
                 let name: String = chars
                     .iter()
@@ -57,6 +60,15 @@ pub(crate) fn lex(input: &str) -> Result<Vec<Token>, MathError> {
                     match chars.get(i.saturating_add(1)) {
                         // Explicit spacing: exactly one char is consumed.
                         Some(&ch @ (',' | ':' | ';' | '!' | ' ')) => {
+                            tokens.push(Token {
+                                kind: TokenKind::Command(ch.to_string()),
+                                pos,
+                            });
+                            i = i.saturating_add(2);
+                            continue;
+                        }
+                        // Escaped delimiters usable as `\left`/`\right` delimiters.
+                        Some(&ch @ ('{' | '}' | '|')) => {
                             tokens.push(Token {
                                 kind: TokenKind::Command(ch.to_string()),
                                 pos,
@@ -75,9 +87,9 @@ pub(crate) fn lex(input: &str) -> Result<Vec<Token>, MathError> {
                             return Err(MathError::Unsupported {
                                 pos,
                                 name: ch.to_string(),
-                                hint: "only the spacing commands \\, \\: \\; \\! \\quad \\qquad \
-                                       and backslash-space are supported; other symbol commands \
-                                       are out of scope for v1"
+                                hint: "only the spacing commands \\, \\: \\; \\! \\quad \\qquad, \
+                                       backslash-space and the delimiters \\{ \\} \\| are supported; \
+                                       other symbol commands are out of scope for v1"
                                     .into(),
                             })
                         }

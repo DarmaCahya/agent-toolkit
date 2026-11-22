@@ -35,6 +35,16 @@ fn token() -> impl Strategy<Value = String> {
         Just(r"\pm".to_string()),
         Just(r"\infty".to_string()),
         Just(r"\left".to_string()),
+        Just(r"\right".to_string()),
+        Just(r"\langle".to_string()),
+        Just(r"\rangle".to_string()),
+        Just(r"\lvert".to_string()),
+        Just(r"\rvert".to_string()),
+        Just(r"\lVert".to_string()),
+        Just(r"\rVert".to_string()),
+        Just(r"\{".to_string()),
+        Just(r"\}".to_string()),
+        Just(r"\|".to_string()),
         Just(r"\,".to_string()),
         Just(r"\:".to_string()),
         Just(r"\;".to_string()),
@@ -48,7 +58,7 @@ fn token() -> impl Strategy<Value = String> {
         Just("é".to_string()),
         "[a-zA-Z]",
         "[0-9]",
-        "[-+=<>(), ]",
+        "[-+=<>(),.|]",
     ]
 }
 

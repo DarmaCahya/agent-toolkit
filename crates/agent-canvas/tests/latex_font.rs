@@ -54,6 +54,9 @@ fn required_chars() -> Vec<char> {
     v.extend('\u{0391}'..='\u{03A9}'); // upright uppercase Greek
     v.retain(|&c| c != '\u{03A2}'); // unassigned
     v.extend(['±', '·', '×', '≤', '≥', '≠', '∞', '√', '∑', '∫', '∏']);
+    // Auto-sizing delimiter glyphs for `\left ... \right`: ( ) [ ] { } | are
+    // above, these are the double bar and the angle brackets.
+    v.extend(['\u{2016}', '\u{27E8}', '\u{27E9}']);
     v
 }
 
@@ -80,6 +83,75 @@ fn big_operators_and_radical_have_vertical_variants() {
             .get(gid)
             .map_or(0, |cons| cons.variants.into_iter().count());
         assert!(n > 0, "no vertical variants for {c}");
+    }
+}
+
+/// Characters usable as `\left` / `\right` delimiters.
+fn delimiter_chars() -> Vec<char> {
+    vec![
+        '(', ')', '[', ']', '{', '}', '|', '\u{2016}', '\u{27E8}', '\u{27E9}',
+    ]
+}
+
+#[test]
+fn every_delimiter_glyph_has_a_vertical_construction() {
+    let f = face();
+    let variants = f.tables().math.unwrap().variants.expect("MathVariants");
+    for c in delimiter_chars() {
+        let gid = f
+            .glyph_index(c)
+            .unwrap_or_else(|| panic!("no glyph for U+{:04X}", c as u32));
+        let cons = variants
+            .vertical_constructions
+            .get(gid)
+            .unwrap_or_else(|| panic!("no vertical construction for U+{:04X}", c as u32));
+        let sizes: Vec<_> = cons.variants.into_iter().collect();
+        assert!(
+            !sizes.is_empty(),
+            "no vertical size variant for U+{:04X}",
+            c as u32
+        );
+        for v in sizes {
+            assert!(
+                f.glyph_bounding_box(v.variant_glyph).is_some(),
+                "variant {} of U+{:04X} has no outline",
+                v.variant_glyph.0,
+                c as u32
+            );
+        }
+        if let Some(asm) = cons.assembly {
+            for p in asm.parts {
+                assert!(
+                    f.glyph_bounding_box(p.glyph_id).is_some(),
+                    "assembly part {} of U+{:04X} is missing",
+                    p.glyph_id.0,
+                    c as u32
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn angle_brackets_and_double_bar_grow_tall_enough() {
+    let f = face();
+    let variants = f.tables().math.unwrap().variants.expect("MathVariants");
+    let upem = f64::from(f.units_per_em());
+    for c in ['\u{27E8}', '\u{27E9}', '\u{2016}'] {
+        let gid = f.glyph_index(c).unwrap();
+        let cons = variants.vertical_constructions.get(gid).unwrap();
+        // Growth capacity: the tallest variant (or an assembly) must reach at
+        // least 1.5 em so it can cover a fraction.
+        let tallest = cons
+            .variants
+            .into_iter()
+            .map(|v| f64::from(v.advance_measurement) / upem)
+            .fold(0.0_f64, f64::max);
+        assert!(
+            tallest >= 1.5 || cons.assembly.is_some(),
+            "U+{:04X} cannot grow past {tallest:.2} em",
+            c as u32
+        );
     }
 }
 

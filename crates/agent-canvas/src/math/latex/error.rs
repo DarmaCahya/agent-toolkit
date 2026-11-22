@@ -79,6 +79,28 @@ pub enum MathError {
         /// `"superscript"` or `"subscript"`.
         kind: &'static str,
     },
+    /// A `\left` that is never closed by a `\right`.
+    #[error("missing \\right for the \\left at position {pos}; hint: close every \\left with a matching \\right")]
+    MissingRight {
+        /// Char position of the unmatched `\left`.
+        pos: usize,
+    },
+    /// A `\right` outside any `\left ... \right`.
+    #[error("\\right without a preceding \\left at position {pos}; hint: remove it or add the matching \\left")]
+    UnexpectedRight {
+        /// Char position of the `\right`.
+        pos: usize,
+    },
+    /// A delimiter that is missing or outside the supported set.
+    #[error("invalid delimiter {found} at position {pos} after \\{command}; hint: use ( ) [ ] {{ }} | \\{{ \\}} \\| \\langle \\rangle \\lvert \\rvert \\lVert \\rVert or .")]
+    InvalidDelimiter {
+        /// Char position of the delimiter (or the end of the input).
+        pos: usize,
+        /// `"left"` or `"right"`.
+        command: &'static str,
+        /// What was found, e.g. `"\\foo"`, `"+"` or `"end of input"`.
+        found: String,
+    },
     /// The bundled font lacks a glyph.
     #[error("no glyph for {ch:?} in the bundled math font; hint: use a supported symbol")]
     MissingGlyph {
@@ -108,7 +130,10 @@ impl MathError {
             | Self::UnknownCommand { pos, .. }
             | Self::Unsupported { pos, .. }
             | Self::MissingArgument { pos, .. }
-            | Self::DoubleScript { pos, .. } => Some(*pos),
+            | Self::DoubleScript { pos, .. }
+            | Self::MissingRight { pos }
+            | Self::UnexpectedRight { pos }
+            | Self::InvalidDelimiter { pos, .. } => Some(*pos),
         }
     }
 }
