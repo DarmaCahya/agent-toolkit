@@ -51,7 +51,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-pdf-agent = "0.1.0"
+pdf-agent = "0.1.1"
 ```
 
 ### Feature Flags
@@ -60,10 +60,10 @@ Customize which engines are compiled to keep binaries lean:
 
 ```toml
 # Default includes all features: reader, render, writer
-pdf-agent = { version = "0.1.0" }
+pdf-agent = { version = "0.1.1" }
 
 # Read-only (minimal dependencies & lightning-fast compile)
-pdf-agent = { version = "0.1.0", default-features = false, features = ["reader"] }
+pdf-agent = { version = "0.1.1", default-features = false, features = ["reader"] }
 ```
 
 ---
@@ -168,3 +168,5 @@ Licensed under either of:
 - Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
 - MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 at your option.
+
+Machine-readable context for LLM crawlers: [`llms.txt`](../../llms.txt) and [`llms-full.txt`](../../llms-full.txt).

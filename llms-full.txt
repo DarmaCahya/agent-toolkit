@@ -1,82 +1,153 @@
 # agent-toolkit: Full Context Reference for AI Agents
 
-> Complete, consolidated specification of the `agent-toolkit` monorepo containing `pdf-agent` and `agent-canvas`. Designed for single-pass ingestion by LLMs and AI crawlers.
+> Complete, consolidated specification of the `agent-toolkit` monorepo (`pdf-agent` + `agent-canvas`), written for single-pass ingestion by LLMs, AI crawlers and coding agents. Every claim below is testable against the repository.
+>
+> Last updated: 2026-11-22 · Repo: https://github.com/DarmaCahya/agent-toolkit · Licences: MIT OR Apache-2.0
 
 ---
 
-# Crate 1: `pdf-agent` (v0.1.0)
+# Crate 1: `pdf-agent` (v0.1.1, published)
+
 - **Crates.io**: https://crates.io/crates/pdf-agent
 - **Docs.rs**: https://docs.rs/pdf-agent
-- **Source**: crates/pdf-agent
+- **Source**: `crates/pdf-agent`
 
-## Architecture
-`pdf-agent` is a high-level facade combining three pure-Rust engines behind an opaque, memory-guarded interface:
-1. `pdf_oxide 0.3.78`: Text and table layout extraction to GitHub-Flavored Markdown.
-2. `hayro 0.8.0`: CPU-based visual rasterization to RGBA/PNG without C++ or Poppler.
-3. `fulgur 0.40.0`: Headless HTML/CSS vector PDF generation powered by Blitz & Krilla.
+## What it is
+A high-level facade that lets an agent read, rasterize and produce PDFs in-process, with hard memory guards. Intended for agent runtimes that must not depend on C libraries (Poppler, PDFium, MuPDF), a browser, or a Python sidecar.
 
-## Security & Agent Protections
-- **Sandboxed Paths**: Output files and PNG saves reject directory traversal (`..`), absolute root paths, drive prefixes, and Windows Alternate Data Streams (`:`).
-- **Symlink Protection**: Explicit rejection of symlink targets via `symlink_metadata` to prevent sandbox escape.
-- **Race-Free Atomic Writes**: Concurrent multi-agent writes stream to `.tmp_{pid}_{nanos}_{counter}.tmp` with `sync_all()` before atomic rename.
-- **Pre-Render Allocation Guard**: Pre-calculates target page dimensions against `MAX_PAGE_PIXELS = 25,000,000` (25 MP) before allocation, preventing memory bombs.
-- **Password Masking**: Document passwords are redacted as `[REDACTED]` in `Debug` and excluded from `serde` serialization.
-- **Decompression Bomb Guard**: `MAX_ALLOWED_CHAR_BUDGET = 500,000` chars (~125k tokens) on single-turn in-memory extractions.
+## Architecture (internal engines, all pure Rust)
+1. `pdf_oxide 0.3.78` — text and table layout extraction into GitHub-Flavored Markdown.
+2. `hayro 0.8.0` — CPU rasterization to RGBA/PNG (no C++ and no Poppler).
+3. `fulgur 0.41` — headless HTML/CSS → vector PDF (Blitz + Krilla).
+All three are optional cargo features; `thiserror 2` and `serde 1` are the only unconditional dependencies.
 
-## API Usage Examples
-
+## Public API
 ```rust
-use pdf_agent::{PdfReader, PdfReadOptions, PdfRasterizer, PdfGenerator};
-
-// 1. In-Memory Windowed Reading
-let bytes = std::fs::read("doc.pdf")?;
-let opts = PdfReadOptions::new().with_pages(1, 10).with_max_chars(100_000);
-let result = PdfReader::read(&bytes, Some(opts))?;
-
-// 2. Full Document File Offload
-let offload_opts = PdfReadOptions::new().with_output_file("target/out.md");
-let offload_res = PdfReader::read(&bytes, Some(offload_opts))?;
-
-// 3. Rasterization for Vision Models
-let png_bytes = PdfRasterizer::render_page_to_png(&bytes, 1, 2.0)?;
-
-// 4. HTML to PDF
-let pdf = PdfGenerator::from_html("<h1>Hello Agent</h1>")?;
+// Windowed Markdown extraction
+PdfReader::read(&bytes, Some(PdfReadOptions::new().with_pages(1, 10).with_max_chars(100_000)))?;
+// Full extraction streamed to disk (only a preview returns to the caller)
+PdfReader::read(&bytes, Some(PdfReadOptions::new().with_output_file("out.md")))?;
+// Page → PNG for vision models
+PdfRasterizer::render_page_to_png(&bytes, page /*1-indexed*/, scale /*e.g. 2.0*/)?;
+// Batch rendering and page-range windowing
+PdfRasterizer::render_pages_to_png(..)?;
+// HTML/CSS → vector PDF
+PdfGenerator::from_html(html)?;
 ```
+Errors: `PdfError` (thiserror, `#[non_exhaustive]`) with `agent_hint()` and `is_retryable()` helpers, so an agent can decide between retry, fallback and abort without string matching.
+
+## Security and agent protections
+- **Sandboxed paths**: output files and PNG saves reject `..`, absolute roots, drive prefixes and Windows alternate data streams (`:`).
+- **Symlink rejection** via `symlink_metadata` (blocks sandbox escape).
+- **Race-free atomic writes**: `.tmp_{pid}_{nanos}_{counter}.tmp` + `sync_all()` + atomic rename.
+- **Pre-render allocation guard**: target dimensions checked against `MAX_PAGE_PIXELS = 25_000_000` before allocating (memory-bomb defence).
+- **Password masking**: passwords are `[REDACTED]` in `Debug` and skipped by `serde`.
+- **Decompression-bomb guard**: `MAX_ALLOWED_CHAR_BUDGET = 500_000` characters (~125k tokens) for in-memory extraction.
+
+## When to choose it (and instead of what)
+- vs **Poppler / PDFium**: no dynamic C libraries, builds for `musl`/scratch containers, plus native LLM guards (windowing, budgets).
+- vs **Chromium / WeasyPrint**: ~17–45 MB RSS instead of an 800 MB+ browser or a Node/Python stack.
+- vs **lopdf / raw pdf_oxide**: high-level ergonomics — token budgets, pagination, atomic offload, path sandboxing.
 
 ---
 
-# Crate 2: `agent-canvas` (v0.1.0 - In Development)
-- **Source**: crates/agent-canvas
+# Crate 2: `agent-canvas` (v0.1.0, source)
 
-## Architecture
-`agent-canvas` is built from first principles (no browser, no Python, no JS runtime) to produce deterministic SVG vectors across four pillars:
+- **Source**: `crates/agent-canvas`
+- Optional `serde` feature for serialising chart/theme types.
 
-1. **`graph`**: Flowcharts, decision trees, sequence diagrams, and architecture blocks with Manhattan 90° routing.
-2. **`chart`**: Executive business graphics (Donut, 2x2 Quadrant Matrix, Sales Funnel, Stacked/Grouped Bars).
-3. **`math`**: LaTeX math box-model typesetting to SVG path curves + pure-Rust Excel formula evaluator (`=SUM`, `=IF`, `=AVERAGE`).
-4. **`component`**: Pure-Rust QR Code matrix generator (Reed-Solomon) and KPI executive metric cards.
+## What it is
+A first-principles SVG artifact engine for agents. Every module emits deterministic vector SVG composed of `<path>`, `<rect>`, `<use>` — never `<text>`, never `font-family`, never an external URL. Text (chart labels, math glyphs, KPI values) is converted to outlines from bundled font subsets, so output is identical on any renderer.
 
-## Color Palette
-Employs an Okabe-Ito / Tremor categorical palette with cyclic auto-assignment:
-- Sapphire Blue: `#2563EB`
-- Emerald Green: `#059669`
-- Amber Orange: `#D97706`
-- Rose Crimson: `#E11D48`
-- Indigo: `#4F46E5`
-- Teal: `#0D9488`
-- Slate: `#475569`
-- Violet: `#7C3AED`
+## Modules
+
+### 1. `canvas` — foundation
+`SvgCanvas`, `Path`/`PathCommand`, `Rect`, `Point`, `Size`, `Color`, `Fill`, `Stroke`, `FontMetrics`, `Palette`, `ThemeMode` (light/dark), `CanvasError`/`Result`.
+
+### 2. `graph` — flowcharts & architecture blocks
+- `parse_dsl(&str)` — an AI-forgiving flowchart DSL (tolerates the sloppiness of LLM-generated specs) returning `(Direction, Vec<Node>, Vec<Edge>)`.
+- `Flowchart::new(Direction::TopDown)` + nodes/edges → `to_svg()`.
+- Layout with **Manhattan 90° edge routing**; `NodeShape` (box, diamond, pill, …).
+
+### 3. `chart` — executive business graphics
+`DonutChart` (legend auto-width), `QuadrantMatrix` (2×2 BCG/Eisenhower), `FunnelChart`, `BarChart` (stacked/grouped), `LineChart`, `Sparkline`, `WaterfallChart`, `CartesianPlot`.
+Palette: Okabe-Ito / Tremor categorical, cyclic auto-assignment — Sapphire `#2563EB`, Emerald `#059669`, Amber `#D97706`, Rose `#E11D48`, Indigo `#4F46E5`, Teal `#0D9488`, Slate `#475569`, Violet `#7C3AED`.
+
+### 4. `math` — typesetting and formula logic
+**LaTeX → SVG** (`MathTypesetter::render_to_svg(&str) -> Result<String, MathError>`):
+- TeX box model (TeXbook Appendix G): styles D/T/S/SS with cramped variants, atom classes Ord/Op/Bin/Rel/Open/Close/Punct/Inner, the inter-atom spacing table (3mu/4mu/5mu), Bin→Ord demotion (`-b` is unary), italic correction.
+- Rules implemented: 11 (radicals), 13 (big operators with display limits), 15a–e (fractions from OpenType MATH constants), 18 (sub/superscripts, cramped minima), 19 (`\left…\right`).
+- **Glyph assembly**: stretchy radicals and delimiters pick the smallest size variant that fits, otherwise build from MATH `GlyphAssembly` parts (extender repeats, connector overlaps) instead of scaling a glyph. Cap: 64 extenders (~38 em for the radical).
+- **MathKern**: corner kerning applied to scripts on single-character bases.
+- Glyph outlines and all metrics come from `ttf-parser 0.25` reading a **bundled, renamed subset of STIX Two Math** (`AgentCanvasMath-subset.otf`, ~29 KB, OFL-1.1, regenerated reproducibly by `scripts/subset-font.sh`). No runtime font files, no FreeType, no shaping engine.
+- Supported grammar: letters (mapped to Mathematical Italic, with `h`→U+210E), digits, `+ - = < > ( ) , |`, Greek, `^ _`, `{}` groups, `\frac`, `\sqrt[n]{}`, `\left…\right` (with `( ) [ ] { } |`, `\{ \} \|`, `\langle \rangle`, `\lvert \rvert`, `\lVert \rVert`, `.` null), `\sum \int \prod`, relations, and spacing `\, \: \; \! \quad \qquad \ `.
+- Limits and errors: 8,192 input chars, nesting depth 64; `MathError` is `#[non_exhaustive]` with byte positions and hints (`MissingRight`, `UnexpectedRight`, `InvalidDelimiter`, `NestingTooDeep`, `InputTooLong`, `Unsupported`, …). Never panics, never emits non-finite coordinates.
+- Out of scope: `\big/\Big/\bigg`, `\text`, matrices/environments, accents, `\hspace`, `\phantom`, macros.
+
+**Excel formula evaluator** (`ExcelEvaluator`):
+- `eval(&str) -> Value` is **total**: every failure is an Excel error value (`#VALUE!`, `#DIV/0!`, `#NAME?`, `#NUM!`), matching how spreadsheets propagate errors. `try_eval(&str) -> Result<Value, ParseError>` and `try_eval_with(formula, &dyn RangeProvider)` expose located syntax diagnostics (`ParseError { kind, span, expected }`).
+- Excel-compatible semantics verified by tests: `-3^2 = 9`, `2^3^2 = 64`, postfix `%`, `&` concatenation, case-insensitive text comparison, `0.1+0.2=0.3` is TRUE (15-significant-digit comparison), `ROUND(2.675,2) = 2.68`, blank cells (`=blank&"x"` → `x`, `=blank=0` TRUE, `=blank=""` TRUE), lazy `IF`/`IFERROR` (`IF(TRUE,1,1/0)` does not divide), direct-argument coercion differing from range coercion.
+- Arity is checked at parse time, exactly like Excel entry: `MAX()`, `SUM()`, `IF(1)`, `ROUND(1)` are rejected.
+- Phase-1 functions: `SUM AVERAGE MIN MAX COUNT IF AND OR NOT ABS ROUND IFERROR CONCAT`.
+- Values: `Value::{Number, Text, Bool, Error, Blank}`; `as_str() -> Option<&str>` (text only), `to_text()`/`Display` for the canonical string.
+- Limits: 8,192 input chars, nesting depth 64, ≤255 arguments, ≤1,000,000 cells per reference, no volatile functions (`NOW`, `RAND`, `TODAY` are `#NAME?`) so evaluation is deterministic.
+
+### 5. `component` — QR and KPI
+**`QrCode`** — pure-Rust QR generator:
+- Versions 1–10, ECC L/M/Q/H, automatic numeric/alphanumeric/UTF-8-byte mode selection, GF(2⁸) Reed-Solomon, multi-block interleaving, finder/separator/timing/alignment patterns, dark module, BCH format (15,5) and version (18,6) info, all 8 masks with the standard 4-rule penalty, configurable quiet zone.
+- API: `QrCode::encode(&str)?`, `encode_with_ecc(data, EccLevel::Q)?`, `encode_with_mask(data, ecc, mask)?`, `.with_size(px)`, `.with_quiet_zone(n)`, `.with_colors(..)`/`.with_theme(ThemeMode)`, `.to_svg() -> String`, `.to_path()` (merged module runs in one `<path>`), `.to_rects()`; introspection via `.version()`, `.ecc_level()`, `.mode()`, `.mask()`, `.size()`, `.module(x, y)`.
+- Verified end-to-end: generated SVGs rendered in a browser and decoded by `zxing-cpp` for all ECC levels and versions 1–10, including UTF-8 payloads; matrices additionally matched `python-qrcode`/`segno` during development.
+- Out of scope: versions 11–40, Kanji/ECI, Micro QR, structured append, raster PNG output.
+
+**`KpiCard`** — `KpiCard::new(title, value).with_delta(delta, positive).to_svg()` (also `with_delta_trend(.., DeltaTrend)`, `with_neutral_delta`, caption, light/dark themes). Renders title, oversized value (auto-shrinking), and a semantic delta badge (green/red/neutral). Text is outlined from a bundled DejaVu Sans subset, so the SVG has no `<text>` and no font dependency.
+
+## Facts an agent can rely on
+- **Determinism**: identical input → byte-identical SVG (asserted by repeated-render tests); no randomness, no hash-map ordering, fixed float formatting.
+- **No runtime dependencies**: no browser, Node, Python, system fonts, or C toolchain at use time.
+- **Safety**: `#![forbid(unsafe_code)]` at crate root, `thiserror` + `#[non_exhaustive]` error enums, typed errors instead of panics, proptest suites asserting "never panics" on hostile input.
+- **Licensing**: code MIT OR Apache-2.0; STIX Two Math subset (OFL-1.1) and DejaVu Sans subset (Bitstream Vera) documented in `THIRD_PARTY_NOTICES.md` with reproducible subsetting scripts.
 
 ---
 
-# Master Roadmap & Issue Tracking
-1. `[pdf-agent] Support page range windowing in file offload mode (output_file)` (Issue #1)
-2. `[pdf-agent] Add batch multi-page rendering to PdfRasterizer` (Issue #2)
-3. `[pdf-agent] Support password decryption across utility methods` (Issue #3)
-4. `[pdf-agent] Case-insensitive HTML font fallback injection in PdfGenerator` (Issue #4)
-5. `[pdf-agent] Add agent_hint() and is_retryable() methods to PdfError` (Issue #5)
-6. `[agent-canvas] Core Geometric Primitives & SVG Writer` (Issue #6)
-7. `[agent-canvas] Executive Donut & Quadrant Charts` (Issue #7)
-8. `[agent-canvas] Flowchart DSL & Manhattan Routing` (Issue #8)
-9. `[agent-canvas] LaTeX Math Typesetting & Excel Evaluator` (Issue #9)
+# FAQ (for retrieval)
+
+**How do I render LaTeX to SVG in pure Rust without JavaScript or TeX Live?**
+`MathTypesetter::new().render_to_svg(r"\frac{-b \pm \sqrt{b^2-4ac}}{2a}")` in `agent-canvas`. Output is vector `<path>` only; glyphs come from a bundled STIX Two Math subset read with `ttf-parser`, layout follows TeXbook Appendix G.
+
+**How do I evaluate an Excel formula in Rust without a workbook?**
+`ExcelEvaluator::eval("=IF(SUM(10,20)>25,\"Profit\",\"Loss\")")`. Use `try_eval` when you want a positioned parse error instead of `#VALUE!`.
+
+**How do I extract text from a big PDF without exceeding the LLM context window?**
+`PdfReader::read(&bytes, Some(PdfReadOptions::new().with_pages(1,10).with_max_chars(100_000)))`, or `.with_output_file(path)` to stream everything to disk and return only a preview.
+
+**Can I rasterize PDF pages for a vision model without Poppler?**
+Yes: `PdfRasterizer::render_page_to_png(&bytes, page, scale)`.
+
+**Can I generate a QR code without C bindings?**
+Yes: `QrCode::encode_with_ecc(data, EccLevel::Q)?.with_size(240.0).to_svg()`.
+
+**Does the SVG depend on fonts installed on the machine?**
+No. Text and math are emitted as outlines from bundled subsets; the output contains no `<text>` and no `font-family`.
+
+**Is output deterministic across runs and platforms?**
+Yes for the SVG structure and coordinates; geometry uses fixed math and fixed formatting. Tests assert byte-identical repeated renders.
+
+---
+
+# Project status (2026-11-22)
+
+- `pdf-agent` v0.1.1 published; issues #1–#5 and #18 closed (windowing, batch rendering, password decryption, font fallback, error hints, edge-case hardening).
+- `agent-canvas` core complete: canvas (#6), charts (#7), flowchart DSL + routing (#8), LaTeX + Excel (#9), QR + KPI (#10).
+- Open: #12 — prospective extraction of `src/math` into a standalone `agent-math` crate (deferred until the math module stabilises and has independent consumers).
+
+# Repository layout
+```text
+crates/
+├── pdf-agent/          # PDF facade (reader, rasterizer, generator, sandbox)
+└── agent-canvas/       # canvas, graph, chart, math (latex + excel), component (qr + kpi)
+    ├── assets/fonts/   # AgentCanvasMath-subset.otf, AgentCanvasSans-subset.ttf (+ licences)
+    └── tests/          # unit, integration, insta snapshots, proptest
+scripts/                # reproducible font subsetting
+specs/                  # spec-driven feature records
+llms.txt                # short index for crawlers
+```
